@@ -1,0 +1,37 @@
+{
+  "name": "budget-management",
+  "version": "1.0.0",
+  "description": "가계부 관리 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "webpack --mode production",
+    "dev:client": "webpack serve --mode development",
+    "dev:full": "concurrently \"npm run dev\" \"npm run dev:client\""
+  },
+  "dependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "css-loader": "^7.1.2",
+    "express": "^4.18.3",
+    "html-webpack-plugin": "^5.6.3",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.29.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
+    "sqlite3": "^5.1.6",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.100.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
