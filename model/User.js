@@ -1,65 +1,67 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 const crypto = require('crypto');
 
 class User {
     // 사용자 생성
-    static create(userData) {
-        return new Promise((resolve, reject) => {
-            const { username, email, password } = userData;
-            
-            // 비밀번호 해시화
-            const salt = crypto.randomBytes(16).toString('hex');
-            const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-            
-            db.run('INSERT INTO users (username, email, password_hash, salt) VALUES (?, ?, ?, ?)',
-                [username, email, hash, salt],
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ id: this.lastID, username, email });
-                    }
-                });
-        });
+    static async create(userData) {
+        const { username, email, password } = userData;
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const result = await conn.query(
+                'INSERT INTO users (username, email, password_hash, salt) VALUES (?, ?, ?, ?)',
+                [username, email, hash, salt]
+            );
+            return { id: result.insertId, username, email };
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 사용자 조회 (로그인용)
-    static findByUsername(username) {
-        return new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
+    static async findByUsername(username) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const rows = await conn.query('SELECT * FROM users WHERE username = ?', [username]);
+            return rows[0] || null;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 사용자 조회 (ID로)
-    static findById(id) {
-        return new Promise((resolve, reject) => {
-            db.get('SELECT id, username, email, created_at FROM users WHERE id = ?', [id], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
+    static async findById(id) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const rows = await conn.query('SELECT id, username, email, created_at FROM users WHERE id = ?', [id]);
+            return rows[0] || null;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 이메일 중복 확인
-    static findByEmail(email) {
-        return new Promise((resolve, reject) => {
-            db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
-            });
-        });
+    static async findByEmail(email) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const rows = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
+            return rows[0] || null;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 비밀번호 검증
@@ -69,21 +71,19 @@ class User {
     }
 
     // 비밀번호 변경
-    static updatePassword(userId, newPassword) {
-        return new Promise((resolve, reject) => {
-            const salt = crypto.randomBytes(16).toString('hex');
-            const hash = crypto.pbkdf2Sync(newPassword, salt, 1000, 64, 'sha512').toString('hex');
-            
-            db.run('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?',
-                [hash, salt, userId],
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ updatedRows: this.changes });
-                    }
-                });
-        });
+    static async updatePassword(userId, newPassword) {
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.pbkdf2Sync(newPassword, salt, 1000, 64, 'sha512').toString('hex');
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const result = await conn.query('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?', [hash, salt, userId]);
+            return { updatedRows: result.affectedRows };
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 }
 

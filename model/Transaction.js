@@ -1,39 +1,38 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 
 class Transaction {
     // 모든 거래 내역 조회 (사용자별)
-    static getAll(userId = null) {
-        return new Promise((resolve, reject) => {
+    static async getAll(userId = null) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
             let query = `
                 SELECT t.*, c.name as category_name, c.color as category_color 
                 FROM transactions t 
                 LEFT JOIN categories c ON t.category_id = c.id 
             `;
             let params = [];
-            
             if (userId) {
                 query += ' WHERE t.user_id = ?';
                 params.push(userId);
             }
-            
             query += ' ORDER BY t.date DESC, t.created_at DESC';
-            
-            db.all(query, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
+            const rows = await conn.query(query, params);
+            return rows;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 월별 거래 내역 조회 (사용자별)
-    static getByMonth(year, month, userId = null) {
-        return new Promise((resolve, reject) => {
-            const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-            const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
-            
+    static async getByMonth(year, month, userId = null) {
+        const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+        const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
+        let conn;
+        try {
+            conn = await pool.getConnection();
             let query = `
                 SELECT t.*, c.name as category_name, c.color as category_color 
                 FROM transactions t 
@@ -41,60 +40,57 @@ class Transaction {
                 WHERE t.date BETWEEN ? AND ?
             `;
             let params = [startDate, endDate];
-            
             if (userId) {
                 query += ' AND t.user_id = ?';
                 params.push(userId);
             }
-            
             query += ' ORDER BY t.date DESC, t.created_at DESC';
-            
-            db.all(query, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
+            const rows = await conn.query(query, params);
+            return rows;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 거래 내역 추가
-    static create(transactionData) {
-        return new Promise((resolve, reject) => {
-            const { amount, description, category_id, type, date, user_id, account, card, memo } = transactionData;
-            db.run('INSERT INTO transactions (amount, description, category_id, type, date, user_id, account, card, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [amount, description, category_id, type, date, user_id, account || null, card || null, memo || null],
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ id: this.lastID, ...transactionData });
-                    }
-                });
-        });
+    static async create(transactionData) {
+        const { amount, description, category_id, type, date, user_id, account, card, memo } = transactionData;
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const result = await conn.query(
+                'INSERT INTO transactions (amount, description, category_id, type, date, user_id, account, card, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [amount, description, category_id, type, date, user_id, account || null, card || null, memo || null]
+            );
+            return { id: result.insertId, ...transactionData };
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 거래 내역 수정
-    static update(id, transactionData, userId = null) {
-        return new Promise((resolve, reject) => {
-            const { amount, description, category_id, type, date, account, card, memo } = transactionData;
+    static async update(id, transactionData, userId = null) {
+        const { amount, description, category_id, type, date, account, card, memo } = transactionData;
+        let conn;
+        try {
+            conn = await pool.getConnection();
             let query = 'UPDATE transactions SET amount = ?, description = ?, category_id = ?, type = ?, date = ?, account = ?, card = ?, memo = ? WHERE id = ?';
             let params = [amount, description, category_id, type, date, account || null, card || null, memo || null, id];
-            
             if (userId) {
                 query += ' AND user_id = ?';
                 params.push(userId);
             }
-            
-            db.run(query, params, function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ id, ...transactionData });
-                }
-            });
-        });
+            const result = await conn.query(query, params);
+            return { id, ...transactionData };
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
     // 거래 내역 삭제
