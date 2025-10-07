@@ -4,7 +4,20 @@ const CategoryController = require('../controller/categoryController');
 const TransactionController = require('../controller/transactionController');
 const AuthController = require('../controller/authController');
 const BalanceController = require('../controller/balanceController');
+const MemoController = require("../controller/memoController");
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
+
+// 헬스 체크 엔드포인트
+router.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      message: '서버가 정상적으로 동작 중입니다.'
+    }
+  });
+});
 
 // 인증 라우트 (인증 불필요)
 router.post('/auth/register', AuthController.register);
@@ -37,6 +50,15 @@ router.get('/stats/:year/:month/categories', optionalAuth, TransactionController
 router.get('/balance/initial', authenticateToken, BalanceController.getInitialBalance);
 router.post('/balance/initial', authenticateToken, BalanceController.setInitialBalance);
 router.get('/balance/total', authenticateToken, BalanceController.getTotalBalance);
+
+// 메모 라우트
+router.get('/memos/my', authenticateToken, MemoController.getMyMemos);
+router.get('/memos/public', MemoController.getPublicMemos);
+router.get('/memos/date/:date', authenticateToken, MemoController.getMemosByDate);
+router.post('/memos', authenticateToken, MemoController.createMemo);
+router.put('/memos/:id', authenticateToken, MemoController.updateMemo);
+router.delete('/memos/:id', authenticateToken, MemoController.deleteMemo);
+router.patch('/memos/:id/toggle', authenticateToken, MemoController.toggleComplete);
 
 // 아이디 찾기
 router.post('/auth/find-username', AuthController.findUsername);

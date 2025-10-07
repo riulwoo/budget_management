@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
+import './TransactionModal.css';
+
+// 한국 시간대 기준으로 오늘 날짜 가져오기
+const getTodayKST = () => {
+  const now = new Date();
+  const kstOffset = 9 * 60; // KST는 UTC+9
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const kst = new Date(utc + (kstOffset * 60000));
+  return kst.toISOString().split('T')[0];
+};
 
 const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
   const { categories } = useData();
@@ -8,8 +18,10 @@ const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
     description: '',
     category_id: '',
     type: '',
-    date: new Date().toISOString().split('T')[0]
+    date: getTodayKST()
   });
+  const [selectedMain, setSelectedMain] = useState('');
+  const [selectedMid, setSelectedMid] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,18 +32,45 @@ const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
         description: transaction.description || '',
         category_id: transaction.category_id || '',
         type: transaction.type || '',
-        date: transaction.date || new Date().toISOString().split('T')[0]
+        date: transaction.date || getTodayKST()
       });
+      
+      // 기존 거래의 카테고리 계층 구조 설정
+      if (transaction.category_id) {
+        const selectedCategory = categories.find(c => c.id == transaction.category_id);
+        if (selectedCategory) {
+          if (selectedCategory.parent_id) {
+            // 중분류 또는 소분류인 경우
+            const parentCategory = categories.find(c => c.id == selectedCategory.parent_id);
+            if (parentCategory && parentCategory.parent_id) {
+              // 소분류인 경우
+              const grandParent = categories.find(c => c.id == parentCategory.parent_id);
+              setSelectedMain(grandParent?.id || '');
+              setSelectedMid(parentCategory.id);
+            } else {
+              // 중분류인 경우
+              setSelectedMain(parentCategory?.id || '');
+              setSelectedMid('');
+            }
+          } else {
+            // 대분류인 경우
+            setSelectedMain('');
+            setSelectedMid('');
+          }
+        }
+      }
     } else {
       setFormData({
         amount: '',
         description: '',
         category_id: '',
         type: '',
-        date: new Date().toISOString().split('T')[0]
+        date: getTodayKST()
       });
+      setSelectedMain('');
+      setSelectedMid('');
     }
-  }, [transaction, show]);
+  }, [transaction, show, categories]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +86,7 @@ const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
           description: '',
           category_id: '',
           type: '',
-          date: new Date().toISOString().split('T')[0]
+          date: getTodayKST()
         });
       } else {
         setError(result.message);
@@ -60,18 +99,63 @@ const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'type') {
+      // 타입이 변경되면 카테고리 선택 초기화
+      setSelectedMain('');
+      setSelectedMid('');
+      setFormData({
+        ...formData,
+        [name]: value,
+        category_id: ''
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };
+
+  const handleMainCategoryChange = (e) => {
+    const value = e.target.value;
+    setSelectedMain(value);
+    setSelectedMid('');
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      category_id: value // 대분류를 선택한 경우 해당 ID를 설정
     });
   };
 
-  const filteredCategories = categories.filter(cat => 
+  const handleMidCategoryChange = (e) => {
+    const value = e.target.value;
+    setSelectedMid(value);
+    setFormData({
+      ...formData,
+      category_id: value // 중분류를 선택한 경우 해당 ID를 설정
+    });
+  };
+
+  const handleSubCategoryChange = (e) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      category_id: value // 소분류를 선택한 경우 해당 ID를 설정
+    });
+  };
+
+  // 카테고리 필터링
+  const typeFilteredCategories = categories.filter(cat => 
     !formData.type || cat.type === formData.type
   );
+  
+  const mainCategories = typeFilteredCategories.filter(c => !c.parent_id);
+  const midCategories = selectedMain ? typeFilteredCategories.filter(c => c.parent_id == selectedMain) : [];
+  const subCategories = selectedMid ? typeFilteredCategories.filter(c => c.parent_id == selectedMid) : [];
 
   return (
-    <div className={`modal fade ${show ? 'show' : ''}`} 
+    <div className={`modal fade transaction-modal ${show ? 'show' : ''}`} 
          style={{ display: show ? 'block' : 'none' }}
          tabIndex="-1">
       <div className="modal-dialog">
@@ -124,22 +208,87 @@ const TransactionModal = ({ show, onHide, onSubmit, transaction = null }) => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="mb-3">
-                <label className="form-label">카테고리</label>
-                <select 
-                  className="form-select" 
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={handleChange}
-                >
-                  <option value="">선택하세요</option>
-                  {filteredCategories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* 카테고리 선택 */}
+              {formData.type && (
+                <div className="mb-3">
+                  <label className="form-label">카테고리</label>
+                  
+                  <div className="category-selection">
+                    {/* 진행 표시 */}
+                    <div className="category-progress">
+                      <span className={`step ${selectedMain ? 'active' : ''}`}>대분류</span>
+                      <span className="arrow">→</span>
+                      <span className={`step ${selectedMid ? 'active' : ''}`}>중분류</span>
+                      <span className="arrow">→</span>
+                      <span className={`step ${selectedMid && subCategories.length > 0 && formData.category_id && subCategories.find(c => c.id == formData.category_id) ? 'active' : ''}`}>소분류</span>
+                    </div>
+                    
+                    {/* 대분류 선택 */}
+                    <div className="category-step">
+                      <label>1. 대분류 선택</label>
+                      <select 
+                        className="form-select" 
+                        value={selectedMain}
+                        onChange={handleMainCategoryChange}
+                        disabled={!formData.type}
+                      >
+                        <option value="">대분류를 선택하세요</option>
+                        {mainCategories.map(category => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* 중분류 선택 */}
+                    {selectedMain && midCategories.length > 0 && (
+                      <div className="category-step">
+                        <label>2. 중분류 선택 (선택사항)</label>
+                        <select 
+                          className="form-select" 
+                          value={selectedMid}
+                          onChange={handleMidCategoryChange}
+                        >
+                          <option value="">중분류를 선택하세요</option>
+                          {midCategories.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
+                    {/* 소분류 선택 */}
+                    {selectedMid && subCategories.length > 0 && (
+                      <div className="category-step">
+                        <label>3. 소분류 선택 (선택사항)</label>
+                        <select 
+                          className="form-select" 
+                          value={subCategories.find(c => c.id == formData.category_id)?.id || ''}
+                          onChange={handleSubCategoryChange}
+                        >
+                          <option value="">소분류를 선택하세요</option>
+                          {subCategories.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
+                    {/* 선택된 카테고리 표시 */}
+                    {formData.category_id && (
+                      <div className="selected-category">
+                        <i className="fas fa-check-circle me-2"></i>
+                        선택된 카테고리: {categories.find(c => c.id == formData.category_id)?.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="mb-3">
                 <label className="form-label">날짜</label>
                 <input 

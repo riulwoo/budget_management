@@ -27,8 +27,10 @@ class CategoryController {
     // 카테고리 추가
     static async createCategory(req, res) {
         try {
-            const { name, type, color } = req.body;
+            const { name, type, color, parent_id } = req.body;
             const userId = req.user ? req.user.id : null;
+            
+            console.log('📥 카테고리 생성 요청:', { name, type, color, parent_id, userId });
             
             if (!name || !type) {
                 return res.status(400).json({ 
@@ -44,14 +46,39 @@ class CategoryController {
                 });
             }
 
+            // 부모 카테고리가 있는 경우 유효성 검사
+            if (parent_id) {
+                const parentCategory = await Category.getById ? 
+                    await Category.getById(parent_id) : 
+                    await Category.getAll().then(cats => cats.find(c => c.id == parent_id));
+                
+                if (!parentCategory) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '부모 카테고리를 찾을 수 없습니다.'
+                    });
+                }
+                
+                if (parentCategory.type !== type) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '부모 카테고리와 같은 타입이어야 합니다.'
+                    });
+                }
+            }
+
             const category = await Category.create({ 
                 name, 
                 type, 
                 color: color || '#007bff',
-                user_id: userId
+                user_id: userId,
+                parent_id: parent_id || null
             });
+            
+            console.log('📤 카테고리 생성 결과:', category);
             res.status(201).json({ success: true, data: category });
         } catch (error) {
+            console.error('카테고리 생성 오류:', error);
             res.status(500).json({ success: false, message: error.message });
         }
     }

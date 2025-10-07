@@ -71,7 +71,24 @@ class AuthController {
             });
         } catch (error) {
             console.error('회원가입 오류:', error);
-            res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+            
+            // 구체적인 오류 메시지 처리
+            if (error.message.includes('timeout')) {
+                return res.status(503).json({ 
+                    success: false, 
+                    message: '데이터베이스 연결 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.' 
+                });
+            } else if (error.message.includes('already exists')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: '이미 사용 중인 사용자명 또는 이메일입니다.' 
+                });
+            } else {
+                return res.status(500).json({ 
+                    success: false, 
+                    message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' 
+                });
+            }
         }
     }
 

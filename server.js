@@ -4,6 +4,11 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
+// BigInt 직렬화 문제 해결
+BigInt.prototype.toJSON = function() { 
+    return this.toString(); 
+};
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,9 +18,35 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// 데이터베이스 풀 가져오기
+const pool = require('./config/database');
+
 // API 라우트
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
+
+// 데이터베이스 연결 상태 모니터링 엔드포인트
+app.get('/api/db-status', (req, res) => {
+    try {
+        const stats = {
+            activeConnections: pool.activeConnections(),
+            totalConnections: pool.totalConnections(),
+            idleConnections: pool.idleConnections(),
+            taskQueueSize: pool.taskQueueSize()
+        };
+        res.json({
+            success: true,
+            message: 'Database pool status',
+            data: stats
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get database status',
+            error: error.message
+        });
+    }
+});
 
 // React 앱을 위한 라우트
 app.get('*', (req, res) => {

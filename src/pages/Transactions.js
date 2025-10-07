@@ -6,13 +6,39 @@ import TransactionModal from '../components/modals/TransactionModal';
 
 const Transactions = () => {
   const { currentUser } = useAuth();
-  const { transactions, currentMonth, setCurrentMonth, deleteTransaction, addTransaction } = useData();
+  const { transactions, currentMonth, setCurrentMonth, deleteTransaction, addTransaction, updateTransaction } = useData();
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
 
   const handleDelete = async (id) => {
     if (window.confirm('정말로 이 거래를 삭제하시겠습니까?')) {
       await deleteTransaction(id);
     }
+  };
+
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction);
+    setShowTransactionModal(true);
+  };
+
+  const handleModalSubmit = async (transactionData) => {
+    if (editingTransaction) {
+      // 수정 모드
+      const result = await updateTransaction(editingTransaction.id, transactionData);
+      if (result.success) {
+        setEditingTransaction(null);
+        setShowTransactionModal(false);
+      }
+      return result;
+    } else {
+      // 추가 모드
+      return await addTransaction(transactionData);
+    }
+  };
+
+  const handleModalHide = () => {
+    setEditingTransaction(null);
+    setShowTransactionModal(false);
   };
 
   return (
@@ -66,8 +92,16 @@ const Transactions = () => {
                   {currentUser && (
                     <div className="btn-group btn-group-sm mt-2">
                       <button 
+                        className="btn btn-outline-primary" 
+                        onClick={() => handleEdit(transaction)}
+                        title="수정"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button 
                         className="btn btn-outline-danger" 
                         onClick={() => handleDelete(transaction.id)}
+                        title="삭제"
                       >
                         <i className="fas fa-trash"></i>
                       </button>
@@ -82,8 +116,9 @@ const Transactions = () => {
 
       <TransactionModal 
         show={showTransactionModal}
-        onHide={() => setShowTransactionModal(false)}
-        onSubmit={addTransaction}
+        onHide={handleModalHide}
+        onSubmit={handleModalSubmit}
+        transaction={editingTransaction}
       />
     </div>
   );

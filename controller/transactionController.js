@@ -154,10 +154,15 @@ class TransactionController {
             const { id } = req.params;
             const userId = req.user ? req.user.id : null;
             
+            console.log('삭제 요청:', { transactionId: id, userId: userId });
+            
             // 소유권 확인
             if (userId) {
                 const isOwner = await Transaction.isOwner(id, userId);
+                console.log('소유권 확인 결과:', { transactionId: id, userId: userId, isOwner: isOwner });
+                
                 if (!isOwner) {
+                    console.log('권한 없음 - 삭제 거부');
                     return res.status(403).json({ 
                         success: false, 
                         message: '이 거래 내역을 삭제할 권한이 없습니다.' 

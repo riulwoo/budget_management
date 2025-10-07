@@ -8,7 +8,7 @@ import './styles/App.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
+  // <React.StrictMode> - 개발 중 중복 호출 방지를 위해 임시 비활성화
     <BrowserRouter>
       <AuthProvider>
         <DataProvider>
@@ -16,5 +16,5 @@ root.render(
         </DataProvider>
       </AuthProvider>
     </BrowserRouter>
-  </React.StrictMode>
+  // </React.StrictMode> - 개발 중 중복 호출 방지를 위해 임시 비활성화
 ); 

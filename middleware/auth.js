@@ -35,6 +35,7 @@ function authenticateToken(req, res, next) {
         return res.status(403).json({ success: false, message: '유효하지 않은 토큰입니다.' });
     }
 
+    console.log('인증된 사용자:', decoded);
     req.user = decoded;
     next();
 }

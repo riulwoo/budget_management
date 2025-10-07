@@ -25,18 +25,16 @@ const Layout = () => {
   }
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <Sidebar 
-          currentUser={currentUser}
-          onLoginClick={() => setShowLoginModal(true)}
-          onRegisterClick={() => setShowRegisterModal(true)}
-          onProfileClick={() => setShowProfileModal(true)}
-        />
-        
-        <div className="col-md-9 col-lg-10 main-content p-4">
-          <Outlet />
-        </div>
+    <div className="layout-container">
+      <Sidebar 
+        currentUser={currentUser}
+        onLoginClick={() => setShowLoginModal(true)}
+        onRegisterClick={() => setShowRegisterModal(true)}
+        onProfileClick={() => setShowProfileModal(true)}
+      />
+      
+      <div className="main-content">
+        <Outlet />
       </div>
 
       {/* 모달들 */}

@@ -7,7 +7,8 @@ class Transaction {
         try {
             conn = await pool.getConnection();
             let query = `
-                SELECT t.*, c.name as category_name, c.color as category_color 
+                SELECT t.*, c.name as category_name, c.color as category_color,
+                       DATE_FORMAT(t.date, '%Y-%m-%d') as date_formatted
                 FROM transactions t 
                 LEFT JOIN categories c ON t.category_id = c.id 
             `;
@@ -18,7 +19,11 @@ class Transaction {
             }
             query += ' ORDER BY t.date DESC, t.created_at DESC';
             const rows = await conn.query(query, params);
-            return rows;
+            // date 필드를 문자열로 변환
+            return rows.map(row => ({
+                ...row,
+                date: row.date_formatted || (row.date ? row.date.toISOString().split('T')[0] : null)
+            }));
         } catch (err) {
             throw err;
         } finally {
@@ -34,7 +39,8 @@ class Transaction {
         try {
             conn = await pool.getConnection();
             let query = `
-                SELECT t.*, c.name as category_name, c.color as category_color 
+                SELECT t.*, c.name as category_name, c.color as category_color,
+                       DATE_FORMAT(t.date, '%Y-%m-%d') as date_formatted
                 FROM transactions t 
                 LEFT JOIN categories c ON t.category_id = c.id 
                 WHERE t.date BETWEEN ? AND ?
@@ -46,7 +52,11 @@ class Transaction {
             }
             query += ' ORDER BY t.date DESC, t.created_at DESC';
             const rows = await conn.query(query, params);
-            return rows;
+            // date 필드를 문자열로 변환
+            return rows.map(row => ({
+                ...row,
+                date: row.date_formatted || (row.date ? row.date.toISOString().split('T')[0] : null)
+            }));
         } catch (err) {
             throw err;
         } finally {
@@ -57,6 +67,8 @@ class Transaction {
     // 거래 내역 추가
     static async create(transactionData) {
         const { amount, description, category_id, type, date, user_id, account, card, memo } = transactionData;
+        console.log('거래 생성 데이터:', { user_id, user_id_type: typeof user_id, transactionData });
+        
         let conn;
         try {
             conn = await pool.getConnection();
@@ -64,8 +76,16 @@ class Transaction {
                 'INSERT INTO transactions (amount, description, category_id, type, date, user_id, account, card, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [amount, description, category_id, type, date, user_id, account || null, card || null, memo || null]
             );
-            return { id: result.insertId, ...transactionData };
+            
+            console.log('거래 생성 완료:', { insertId: result.insertId, user_id });
+            
+            return { 
+                id: result.insertId, 
+                ...transactionData,
+                date: typeof date === 'string' ? date : date.toISOString().split('T')[0]
+            };
         } catch (err) {
+            console.error('거래 생성 오류:', err);
             throw err;
         } finally {
             if (conn) conn.release();
@@ -85,7 +105,11 @@ class Transaction {
                 params.push(userId);
             }
             const result = await conn.query(query, params);
-            return { id, ...transactionData };
+            return { 
+                id, 
+                ...transactionData,
+                date: typeof date === 'string' ? date : date.toISOString().split('T')[0]
+            };
         } catch (err) {
             throw err;
         } finally {
@@ -194,8 +218,22 @@ class Transaction {
             conn = await pool.getConnection();
             const rows = await conn.query('SELECT user_id FROM transactions WHERE id = ?', [transactionId]);
             const row = rows[0];
-            return row && row.user_id === userId;
+            
+            console.log('isOwner 확인:', {
+                transactionId: transactionId,
+                userId: userId,
+                dbResult: row,
+                userIdFromDB: row ? row.user_id : null,
+                userIdType: typeof userId,
+                dbUserIdType: row ? typeof row.user_id : 'null',
+                isEqual: row && row.user_id === userId,
+                isEqualStrict: row && parseInt(row.user_id) === parseInt(userId)
+            });
+            
+            // 타입 변환하여 비교 (문자열/숫자 불일치 문제 해결)
+            return row && parseInt(row.user_id) === parseInt(userId);
         } catch (err) {
+            console.error('isOwner 오류:', err);
             throw err;
         } finally {
             if (conn) conn.release();

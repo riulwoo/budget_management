@@ -46,7 +46,7 @@ class Category {
             if (conn) conn.release();
         }
     }
-    
+
     // 모든 카테고리 조회 (사용자별)
     static async getAll(userId = null) {
         let conn;
@@ -100,16 +100,17 @@ class Category {
     }
 
     // 카테고리 추가
+    // parent_id: null(대분류), 대분류id(중분류), 중분류id(소분류)
     static async create(categoryData) {
-        const { name, type, color, user_id } = categoryData;
+        const { name, type, color, user_id, parent_id = null } = categoryData;
         let conn;
         try {
             conn = await pool.getConnection();
             const result = await conn.query(
-                'INSERT INTO categories (name, type, color, user_id) VALUES (?, ?, ?, ?)',
-                [name, type, color, user_id]
+                'INSERT INTO categories (name, type, color, user_id, parent_id) VALUES (?, ?, ?, ?, ?)',
+                [name, type, color, user_id, parent_id]
             );
-            return { id: typeof result.insertId === 'bigint' ? result.insertId.toString() : result.insertId, name, type, color, user_id };
+            return { id: typeof result.insertId === 'bigint' ? result.insertId.toString() : result.insertId, name, type, color, user_id, parent_id };
         } catch (err) {
             throw err;
         } finally {
@@ -119,18 +120,18 @@ class Category {
 
     // 카테고리 수정
     static async update(id, categoryData, userId = null) {
-        const { name, type, color } = categoryData;
+        const { name, type, color, parent_id = null } = categoryData;
         let conn;
         try {
             conn = await pool.getConnection();
-            let query = 'UPDATE categories SET name = ?, type = ?, color = ? WHERE id = ?';
-            let params = [name, type, color, id];
+            let query = 'UPDATE categories SET name = ?, type = ?, color = ?, parent_id = ? WHERE id = ?';
+            let params = [name, type, color, parent_id, id];
             if (userId) {
                 query += ' AND (user_id = ? OR user_id IS NULL)';
                 params.push(userId);
             }
             const result = await conn.query(query, params);
-            return { id: typeof id === 'bigint' ? id.toString() : id, name, type, color };
+            return { id: typeof id === 'bigint' ? id.toString() : id, name, type, color, parent_id };
         } catch (err) {
             throw err;
         } finally {

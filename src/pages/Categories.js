@@ -1,237 +1,170 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import CategoryModal from '../components/modals/CategoryModal';
+import CategoryManager from '../components/CategoryManager';
+import CategoryEditModal from '../components/modals/CategoryEditModal';
+import '../styles/Categories.css';
 
 const Categories = () => {
-  const { currentUser } = useAuth();
-  const { 
-    categories, 
-    addCategory, 
-    updateCategory, 
-    deleteCategory,
-    loading 
-  } = useData();
-  
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const { categories, addCategory, updateCategory, deleteCategory, loading } = useData();
+  const [showModal, setShowModal] = useState(false);
+  const [modalLevel, setModalLevel] = useState('main'); // main, mid, sub
+  const [modalMode, setModalMode] = useState('add'); // add, edit
   const [editingCategory, setEditingCategory] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [parentOptions, setParentOptions] = useState([]);
+  const [parentId, setParentId] = useState(null); // 선택된 부모 카테고리 ID (null이면 중분류/소분류 숨김)
+  const [activeTab, setActiveTab] = useState('all'); // all, income, expense
 
-  const handleEdit = (category) => {
+  // 현재 탭에 따른 카테고리 필터링
+  const filteredCategories = activeTab === 'all' ? categories : categories.filter(c => c.type === activeTab);
+  
+  // 3단 분류용 필터 (탭별로)
+  const mainCategories = filteredCategories.filter(c => !c.parent_id); // 대분류 (parent_id가 없는 카테고리)
+  const midCategories = filteredCategories.filter(c => c.parent_id === parentId && mainCategories.some(m => m.id === c.parent_id)); // 선택된 대분류의 중분류
+  const subCategories = filteredCategories.filter(c => midCategories.some(m => m.id === c.parent_id)); // 선택된 중분류의 소분류
+
+  // 모달 열기
+  const openModal = (level, mode, category = null, parentOptions = [], parentId = null) => {
+    setModalLevel(level);
+    setModalMode(mode);
     setEditingCategory(category);
-    setShowEditModal(true);
+    setParentOptions(parentOptions);
+    setParentId(parentId);
+    setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('정말로 이 카테고리를 삭제하시겠습니까?')) {
-      await deleteCategory(id);
+  // 추가/수정 핸들러
+  const handleAdd = (level, parent = null) => {
+    let options = [];
+    if (level === 'mid') options = mainCategories;
+    if (level === 'sub') options = midCategories;
+    openModal(level, 'add', null, options, parent ? parent.id : null);
+  };
+  const handleEdit = (level, category, parentOptions = []) => {
+    openModal(level, 'edit', category, parentOptions, category.parent_id);
+  };
+  const handleDelete = async (category) => {
+    if (window.confirm('정말로 삭제하시겠습니까?')) {
+      await deleteCategory(category.id);
     }
   };
 
-  const handleAddSubmit = async (categoryData) => {
-    const result = await addCategory(categoryData);
-    if (result.success) {
-      setShowAddModal(false);
+  // 모달 제출
+  const handleModalSubmit = async (formData) => {
+    // activeTab이 'all'일 때는 formData의 type을 그대로 사용
+    const finalType = activeTab === 'all' ? formData.type : activeTab;
+    const dataWithType = { ...formData, type: finalType, parent_id: formData.parent_id || null };
+    
+    if (modalMode === 'add') {
+      const result = await addCategory(dataWithType);
+      if (result.success) setShowModal(false);
+      return result;
+    } else if (modalMode === 'edit') {
+      const result = await updateCategory(editingCategory.id, dataWithType);
+      if (result.success) setShowModal(false);
+      return result;
     }
-    return result;
   };
-
-  const handleEditSubmit = async (categoryData) => {
-    const result = await updateCategory(editingCategory.id, categoryData);
-    if (result.success) {
-      setShowEditModal(false);
-      setEditingCategory(null);
-    }
-    return result;
-  };
-
-  // 필터링 및 정렬
-  const filteredCategories = categories
-    .filter(category => {
-      const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = !typeFilter || category.type === typeFilter;
-      return matchesSearch && matchesType;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'type':
-          return a.type.localeCompare(b.type);
-        case 'usage':
-          return (b.usage_count || 0) - (a.usage_count || 0);
-        default:
-          return 0;
-      }
-    });
-
-  // 통계 계산
-  const totalCategories = categories.length;
-  const incomeCategories = categories.filter(c => c.type === 'income').length;
-  const expenseCategories = categories.filter(c => c.type === 'expense').length;
-  const usedCategories = categories.filter(c => (c.usage_count || 0) > 0).length;
-
-  if (!currentUser) {
-    return (
-      <div className="text-center mt-5">
-        <h3>로그인이 필요합니다</h3>
-        <p>카테고리 관리를 위해 로그인해주세요.</p>
-      </div>
-    );
-  }
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>카테고리 관리</h2>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => setShowAddModal(true)}
-        >
-          <i className="fas fa-plus me-2"></i>카테고리 추가
-        </button>
-      </div>
-
-      {/* 검색 및 필터 */}
-      <div className="row mb-3">
-        <div className="col-md-4">
-          <input 
-            type="text" 
-            className="form-control" 
-            placeholder="카테고리명 검색..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="col-md-3">
-          <select 
-            className="form-select" 
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="">모든 타입</option>
-            <option value="income">수입</option>
-            <option value="expense">지출</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <select 
-            className="form-select" 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            <option value="name">이름순</option>
-            <option value="type">타입순</option>
-            <option value="usage">사용순</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 카테고리 통계 */}
-      <div className="row mb-3">
-        <div className="col-md-3">
-          <div className="card bg-primary text-white">
-            <div className="card-body text-center">
-              <h6>전체 카테고리</h6>
-              <h4>{totalCategories}</h4>
-            </div>
+    <div className="categories-page">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="header-content">
+          <div className="header-text">
+            <h1 className="page-title">카테고리 관리</h1>
+            <p className="page-subtitle">수입과 지출을 체계적으로 분류해보세요</p>
           </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-success text-white">
-            <div className="card-body text-center">
-              <h6>수입 카테고리</h6>
-              <h4>{incomeCategories}</h4>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-danger text-white">
-            <div className="card-body text-center">
-              <h6>지출 카테고리</h6>
-              <h4>{expenseCategories}</h4>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-info text-white">
-            <div className="card-body text-center">
-              <h6>사용 중</h6>
-              <h4>{usedCategories}</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 카테고리 목록 */}
-      <div className="card">
-        <div className="card-body">
-          {filteredCategories.length === 0 ? (
-            <p className="text-muted">검색 결과가 없습니다.</p>
-          ) : (
-            filteredCategories.map(category => (
-              <div key={category.id} className="d-flex justify-content-between align-items-center mb-2 p-3 border rounded category-item">
-                <div className="d-flex align-items-center">
-                  <span 
-                    className="badge category-badge me-2" 
-                    style={{ backgroundColor: category.color }}
-                  >
-                    {category.name}
-                  </span>
-                  <div>
-                    <small className="text-muted d-block">
-                      {category.type === 'income' ? '수입' : '지출'}
-                    </small>
-                    <small className="text-muted">
-                      사용 횟수: {category.usage_count || 0}회
-                    </small>
-                  </div>
-                </div>
-                <div className="btn-group btn-group-sm">
-                  <button 
-                    className="btn btn-outline-primary" 
-                    onClick={() => handleEdit(category)}
-                    title="수정"
-                  >
-                    <i className="fas fa-edit"></i>
-                  </button>
-                  <button 
-                    className="btn btn-outline-danger" 
-                    onClick={() => handleDelete(category.id)}
-                    title="삭제"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </div>
+          <div className="header-stats">
+            <div 
+              className={`stat-card clickable ${activeTab === 'all' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('all');
+                setParentId(null);
+              }}
+            >
+              <div className="stat-icon">
+                <i className="fas fa-list"></i>
               </div>
-            ))
-          )}
+              <div className="stat-number">{categories.length}</div>
+              <div className="stat-label">전체</div>
+            </div>
+            <div 
+              className={`stat-card clickable ${activeTab === 'income' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('income');
+                setParentId(null);
+              }}
+            >
+              <div className="stat-icon">
+                <i className="fas fa-arrow-up"></i>
+              </div>
+              <div className="stat-number">{categories.filter(c => c.type === 'income').length}</div>
+              <div className="stat-label">수입</div>
+            </div>
+            <div 
+              className={`stat-card clickable ${activeTab === 'expense' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('expense');
+                setParentId(null);
+              }}
+            >
+              <div className="stat-icon">
+                <i className="fas fa-arrow-down"></i>
+              </div>
+              <div className="stat-number">{categories.filter(c => c.type === 'expense').length}</div>
+              <div className="stat-label">지출</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 모달들 */}
-      <CategoryModal 
-        show={showAddModal}
-        onHide={() => setShowAddModal(false)}
-        onSubmit={handleAddSubmit}
-        title="카테고리 추가"
+      {/* 안내 메시지 */}
+      <div className="instruction-banner">
+        <div className="instruction-content">
+          <div className="instruction-icon">
+            <i className="fas fa-lightbulb"></i>
+          </div>
+          <div className="instruction-text">
+            <strong>사용법:</strong> 우측 상단의 전체/수입/지출 카드를 클릭하여 카테고리를 필터링하세요. 
+            대분류를 선택하면 중분류가 나타나고, 중분류를 선택하면 소분류가 나타납니다. 각 단계에서 카테고리를 추가, 수정, 삭제할 수 있습니다.
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* 카테고리 매니저 */}
+      <CategoryManager
+        categories={filteredCategories}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        loading={loading}
       />
       
-      <CategoryModal 
-        show={showEditModal}
-        onHide={() => {
-          setShowEditModal(false);
-          setEditingCategory(null);
-        }}
-        onSubmit={handleEditSubmit}
-        title="카테고리 수정"
+      {/* 로딩 오버레이 */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner">
+            <i className="fas fa-spinner fa-spin"></i>
+            <span>처리 중...</span>
+          </div>
+        </div>
+      )}
+
+      <CategoryEditModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        onSubmit={handleModalSubmit}
+        title={modalMode === 'add' ? '카테고리 추가' : '카테고리 수정'}
         category={editingCategory}
+        parentOptions={parentOptions}
+        level={modalLevel}
+        activeType={activeTab === 'all' ? 'expense' : activeTab}
+        showTypeSelection={activeTab === 'all'}
       />
     </div>
   );
 };
 
-export default Categories; 
+export default Categories;

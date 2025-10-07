@@ -10,20 +10,35 @@ export const apiCall = async (url, options = {}) => {
       headers['Authorization'] = `Bearer ${options.token}`;
     }
     
+    console.log(`🔄 API 요청: ${options.method || 'GET'} /api${url}`);
+    
     const response = await fetch(`/api${url}`, {
       headers,
       ...options
     });
     
-    const data = await response.json();
+    console.log('응답 상태:', response.status, response.statusText);
     
-    if (!data.success) {
-      throw new Error(data.message);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('HTTP 오류 응답:', errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    return data.data;
+    const data = await response.json();
+    console.log('응답 데이터:', data);
+    
+    // success 프로퍼티가 없거나 false인 경우 처리
+    if (data.hasOwnProperty('success') && !data.success) {
+      throw new Error(data.message || '알 수 없는 오류');
+    }
+    
+    // success 프로퍼티가 있으면 data 반환, 없으면 전체 데이터 반환
+    const result = data.hasOwnProperty('success') ? data.data : data;
+    console.log(`✅ API 응답: ${options.method || 'GET'} /api${url} 완료`);
+    return result;
   } catch (error) {
-    console.error('API 호출 오류:', error);
+    console.error(`❌ API 오류: ${options.method || 'GET'} /api${url}`, error.message);
     throw error;
   }
 };
