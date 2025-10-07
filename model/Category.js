@@ -1,6 +1,52 @@
 const pool = require('../config/database');
-    
+
 class Category {
+    // 모든 카테고리 + 사용 현황(거래수, 총금액, 마지막 사용일) 반환
+    static async getAllWithUsage(userId = null) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            let query = 'SELECT * FROM categories';
+            let params = [];
+            if (userId) {
+                query += ' WHERE user_id = ? OR user_id IS NULL';
+                params.push(userId);
+            }
+            query += ' ORDER BY type, name';
+            const categories = await conn.query(query, params);
+            // 각 카테고리별 사용 현황 조회
+            const result = [];
+            for (const cat of categories) {
+                // BigInt -> String 변환
+                for (const key in cat) {
+                    if (typeof cat[key] === 'bigint') cat[key] = cat[key].toString();
+                }
+                // 사용 현황 쿼리
+                let usageQuery = `SELECT COUNT(*) as total_count, SUM(amount) as total_amount, MAX(date) as last_used FROM transactions WHERE category_id = ?`;
+                let usageParams = [cat.id];
+                if (userId) {
+                    usageQuery += ' AND user_id = ?';
+                    usageParams.push(userId);
+                }
+                const usageRows = await conn.query(usageQuery, usageParams);
+                const usage = usageRows[0] || {};
+                for (const key in usage) {
+                    if (typeof usage[key] === 'bigint') usage[key] = usage[key].toString();
+                }
+                result.push({ ...cat, usage: {
+                    total_count: usage.total_count || 0,
+                    total_amount: usage.total_amount || 0,
+                    last_used: usage.last_used || null
+                }});
+            }
+            return result;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
+    }
+    
     // 모든 카테고리 조회 (사용자별)
     static async getAll(userId = null) {
         let conn;
