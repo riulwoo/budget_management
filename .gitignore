@@ -1,2 +1,5 @@
 # 환경 변수 파일
 .env
+./package-lock.json
+./node_modules/
+./data/budget.db
