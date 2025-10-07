@@ -7,7 +7,13 @@ class InitialBalance {
         try {
             conn = await pool.getConnection();
             const rows = await conn.query('SELECT * FROM initial_balance WHERE user_id = ?', [userId]);
-            return rows[0] || null;
+            const row = rows[0] || null;
+            if (row) {
+                for (const key in row) {
+                    if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+                }
+            }
+            return row;
         } catch (err) {
             throw err;
         } finally {
@@ -27,7 +33,7 @@ class InitialBalance {
                  ON DUPLICATE KEY UPDATE amount = VALUES(amount), updated_at = CURRENT_TIMESTAMP`,
                 [userId, amount]
             );
-            return { id: result.insertId, user_id: userId, amount };
+            return { id: typeof result.insertId === 'bigint' ? result.insertId.toString() : result.insertId, user_id: userId, amount };
         } catch (err) {
             throw err;
         } finally {
@@ -53,6 +59,9 @@ class InitialBalance {
             `;
             const rows = await conn.query(query, [userId]);
             const row = rows[0] || {};
+            for (const key in row) {
+                if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+            }
             const initialBalance = row.initial_balance || 0;
             const totalIncome = row.total_income || 0;
             const totalExpense = row.total_expense || 0;
