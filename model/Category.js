@@ -14,7 +14,12 @@ class Category {
             }
             query += ' ORDER BY type, name';
             const rows = await conn.query(query, params);
-            return rows;
+            return rows.map(row => {
+                for (const key in row) {
+                    if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+                }
+                return row;
+            });
         } catch (err) {
             throw err;
         } finally {
@@ -35,7 +40,12 @@ class Category {
             }
             query += ' ORDER BY name';
             const rows = await conn.query(query, params);
-            return rows;
+            return rows.map(row => {
+                for (const key in row) {
+                    if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+                }
+                return row;
+            });
         } catch (err) {
             throw err;
         } finally {
@@ -53,7 +63,7 @@ class Category {
                 'INSERT INTO categories (name, type, color, user_id) VALUES (?, ?, ?, ?)',
                 [name, type, color, user_id]
             );
-            return { id: result.insertId, name, type, color, user_id };
+            return { id: typeof result.insertId === 'bigint' ? result.insertId.toString() : result.insertId, name, type, color, user_id };
         } catch (err) {
             throw err;
         } finally {
@@ -74,7 +84,7 @@ class Category {
                 params.push(userId);
             }
             const result = await conn.query(query, params);
-            return { id, name, type, color };
+            return { id: typeof id === 'bigint' ? id.toString() : id, name, type, color };
         } catch (err) {
             throw err;
         } finally {
@@ -94,7 +104,7 @@ class Category {
                 params.push(userId);
             }
             const result = await conn.query(query, params);
-            return { deletedRows: result.affectedRows };
+            return { deletedRows: typeof result.affectedRows === 'bigint' ? result.affectedRows.toString() : result.affectedRows };
         } catch (err) {
             throw err;
         } finally {
@@ -109,6 +119,11 @@ class Category {
             conn = await pool.getConnection();
             const rows = await conn.query('SELECT user_id FROM categories WHERE id = ?', [categoryId]);
             const row = rows[0];
+            if (row) {
+                for (const key in row) {
+                    if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+                }
+            }
             return row && (row.user_id === userId || row.user_id === null);
         } catch (err) {
             throw err;
@@ -137,6 +152,9 @@ class Category {
             }
             const rows = await conn.query(query, params);
             const row = rows[0] || {};
+            for (const key in row) {
+                if (typeof row[key] === 'bigint') row[key] = row[key].toString();
+            }
             return {
                 total_count: row.total_count || 0,
                 total_amount: row.total_amount || 0,

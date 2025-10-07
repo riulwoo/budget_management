@@ -93,33 +93,34 @@ class Transaction {
         }
     }
 
-    // 거래 내역 삭제
-    static delete(id, userId = null) {
-        return new Promise((resolve, reject) => {
+    // 거래 내역 삭제 (async/await + pool)
+    static async delete(id, userId = null) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
             let query = 'DELETE FROM transactions WHERE id = ?';
             let params = [id];
-            
             if (userId) {
                 query += ' AND user_id = ?';
                 params.push(userId);
             }
-            
-            db.run(query, params, function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ deletedRows: this.changes });
-                }
-            });
-        });
+            const result = await conn.query(query, params);
+            // result.affectedRows: 삭제된 행 수 (MariaDB)
+            return { deletedRows: result.affectedRows };
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
-    // 월별 통계 조회 (사용자별)
-    static getMonthlyStats(year, month, userId = null) {
-        return new Promise((resolve, reject) => {
+    // 월별 통계 조회 (사용자별, async/await + pool)
+    static async getMonthlyStats(year, month, userId = null) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
             const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
             const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
-            
             let query = `
                 SELECT 
                     type,
@@ -129,42 +130,37 @@ class Transaction {
                 WHERE date BETWEEN ? AND ?
             `;
             let params = [startDate, endDate];
-            
             if (userId) {
                 query += ' AND user_id = ?';
                 params.push(userId);
             }
-            
             query += ' GROUP BY type';
-            
-            db.all(query, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    const stats = {
-                        income: { total: 0, count: 0 },
-                        expense: { total: 0, count: 0 }
-                    };
-                    
-                    rows.forEach(row => {
-                        stats[row.type] = {
-                            total: parseFloat(row.total_amount),
-                            count: row.count
-                        };
-                    });
-                    
-                    resolve(stats);
-                }
+            const rows = await conn.query(query, params);
+            const stats = {
+                income: { total: 0, count: 0 },
+                expense: { total: 0, count: 0 }
+            };
+            rows.forEach(row => {
+                stats[row.type] = {
+                    total: parseFloat(row.total_amount),
+                    count: row.count
+                };
             });
-        });
+            return stats;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
-    // 카테고리별 통계 조회 (사용자별)
-    static getCategoryStats(year, month, userId = null) {
-        return new Promise((resolve, reject) => {
+    // 카테고리별 통계 조회 (사용자별, async/await + pool)
+    static async getCategoryStats(year, month, userId = null) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
             const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
             const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
-            
             let query = `
                 SELECT 
                     c.name as category_name,
@@ -177,35 +173,33 @@ class Transaction {
                 WHERE t.date BETWEEN ? AND ?
             `;
             let params = [startDate, endDate];
-            
             if (userId) {
                 query += ' AND t.user_id = ?';
                 params.push(userId);
             }
-            
             query += ' GROUP BY c.id, t.type ORDER BY t.type, total_amount DESC';
-            
-            db.all(query, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
-            });
-        });
+            const rows = await conn.query(query, params);
+            return rows;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 
-    // 거래 내역 소유권 확인
-    static isOwner(transactionId, userId) {
-        return new Promise((resolve, reject) => {
-            db.get('SELECT user_id FROM transactions WHERE id = ?', [transactionId], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row && row.user_id === userId);
-                }
-            });
-        });
+    // 거래 내역 소유권 확인 (async/await + pool)
+    static async isOwner(transactionId, userId) {
+        let conn;
+        try {
+            conn = await pool.getConnection();
+            const rows = await conn.query('SELECT user_id FROM transactions WHERE id = ?', [transactionId]);
+            const row = rows[0];
+            return row && row.user_id === userId;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (conn) conn.release();
+        }
     }
 }
 
