@@ -62,15 +62,15 @@ class InitialBalance {
             for (const key in row) {
                 if (typeof row[key] === 'bigint') row[key] = row[key].toString();
             }
-            const initialBalance = row.initial_balance || 0;
-            const totalIncome = row.total_income || 0;
-            const totalExpense = row.total_expense || 0;
+            const initialBalance = Number(row.initial_balance || 0);
+            const totalIncome = Number(row.total_income || 0);
+            const totalExpense = Number(row.total_expense || 0);
             const currentBalance = initialBalance + totalIncome - totalExpense;
             return {
-                initial_balance: initialBalance,
-                total_income: totalIncome,
-                total_expense: totalExpense,
-                current_balance: currentBalance
+                initial_balance: `${initialBalance}`,
+                total_income: `${totalIncome}`,
+                total_expense: `${totalExpense}`,
+                current_balance: `${currentBalance}`
             };
         } catch (err) {
             throw err;
