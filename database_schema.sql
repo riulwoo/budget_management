@@ -3,6 +3,7 @@
 -- Created: October 2025
 
 -- 기존 테이블 삭제 (외래키 순서에 따라 역순으로)
+DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS memos;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS initial_balance;
@@ -127,6 +128,9 @@ SELECT
 FROM transactions
 GROUP BY user_id, YEAR(date), MONTH(date), type;
 
+-- 기존 프로시저 삭제
+DROP PROCEDURE IF EXISTS GetUserBalance;
+
 -- 권한 및 제약조건 확인을 위한 프로시저 (선택사항)
 DELIMITER //
 CREATE PROCEDURE GetUserBalance(IN p_user_id BIGINT)
@@ -148,7 +152,7 @@ END //
 DELIMITER ;
 
 -- 트리거 생성 (감사 로그 등)
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     table_name VARCHAR(50) NOT NULL,
     operation ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
@@ -158,6 +162,11 @@ CREATE TABLE audit_log (
     new_values JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 기존 트리거 삭제
+DROP TRIGGER IF EXISTS tr_transactions_insert;
+DROP TRIGGER IF EXISTS tr_transactions_update;
+DROP TRIGGER IF EXISTS tr_transactions_delete;
 
 DELIMITER //
 CREATE TRIGGER tr_transactions_insert 
@@ -212,10 +221,10 @@ CREATE TABLE IF NOT EXISTS memos (
     INDEX idx_created_at (created_at)
 );
 
--- 메모 샘플 데이터 (user_id = 1 가정)
-INSERT INTO memos (user_id, title, content, date, priority, visibility) VALUES 
-(1, '월급 입금 확인하기', '매월 25일 월급이 정상적으로 입금되었는지 확인하고 가계부에 기록', '2025-10-07', 'high', 'private'),
-(1, '투자 팁 공유', '분기별 투자 성과를 분석하고 리밸런싱 필요 여부 검토\n- 주식 60%\n- 채권 30%\n- 현금 10%', '2025-10-07', 'medium', 'public'),
-(1, '가계부 정리', '이번 달 지출 내역을 카테고리별로 분석하고 다음 달 예산 계획 수립', '2025-10-06', 'medium', 'private'),
-(1, '보험료 납입', '자동차보험과 건강보험료 납입일 확인', '2025-10-05', 'high', 'private'),
-(1, '아이디어 메모', '새로운 부업 아이디어\n- 온라인 강의 제작\n- 블로그 운영\n- 투자 관련 컨설팅', '2025-10-04', 'low', 'private');
+-- 메모 샘플 데이터 (user_id = 1 가정) - 사용자 생성 후 실행
+-- INSERT INTO memos (user_id, title, content, date, priority, visibility) VALUES 
+-- (1, '월급 입금 확인하기', '매월 25일 월급이 정상적으로 입금되었는지 확인하고 가계부에 기록', '2025-10-07', 'high', 'private'),
+-- (1, '투자 팁 공유', '분기별 투자 성과를 분석하고 리밸런싱 필요 여부 검토\n- 주식 60%\n- 채권 30%\n- 현금 10%', '2025-10-07', 'medium', 'public'),
+-- (1, '가계부 정리', '이번 달 지출 내역을 카테고리별로 분석하고 다음 달 예산 계획 수립', '2025-10-06', 'medium', 'private'),
+-- (1, '보험료 납입', '자동차보험과 건강보험료 납입일 확인', '2025-10-05', 'high', 'private'),
+-- (1, '아이디어 메모', '새로운 부업 아이디어\n- 온라인 강의 제작\n- 블로그 운영\n- 투자 관련 컨설팅', '2025-10-04', 'low', 'private');
