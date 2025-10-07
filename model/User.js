@@ -1,8 +1,8 @@
-const pool = require('../config/database');
+const { pool, getUtf8Connection } = require('../config/database');
 const crypto = require('crypto');
 
 class User {
-    // BigInt를 문자열로 변환하는 유틸리티 메서드
+    // BigInt�?문자?�로 변?�하???�틸리티 메서??
     static convertBigIntToString(obj) {
         if (!obj) return obj;
         
@@ -26,11 +26,11 @@ class User {
         
         return obj;
     }
-    // 사용자 생성
+    // ?�용???�성
     static async create(userData) {
         const { username, email, password } = userData;
         
-        // 입력 검증
+        // ?�력 검�?
         if (!username || !email || !password) {
             throw new Error('Username, email, and password are required');
         }
@@ -40,18 +40,18 @@ class User {
         let conn;
         
         try {
-            // 연결 타임아웃 설정과 함께 연결 획득
+            // ?�결 ?�?�아???�정�??�께 ?�결 ?�득
             conn = await Promise.race([
-                pool.getConnection(),
+                getUtf8Connection(),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Connection timeout')), 15000)
                 )
             ]);
 
-            // 중복 확인을 위한 트랜잭션 시작
+            // 중복 ?�인???�한 ?�랜??�� ?�작
             await conn.beginTransaction();
             
-            // 중복 확인
+            // 중복 ?�인
             const existingUser = await conn.query(
                 'SELECT id FROM users WHERE username = ? OR email = ?',
                 [username, email]
@@ -69,7 +69,7 @@ class User {
             
             await conn.commit();
             
-            // BigInt를 문자열로 변환
+            // BigInt�?문자?�로 변??
             const userId = typeof result.insertId === 'bigint' 
                 ? result.insertId.toString() 
                 : result.insertId;
@@ -85,7 +85,7 @@ class User {
                 }
             }
             
-            // 연결 관련 오류 메시지 개선
+            // ?�결 관???�류 메시지 개선
             if (err.message.includes('pool timeout') || err.message.includes('Connection timeout')) {
                 throw new Error('Database connection timeout. Please try again.');
             } else if (err.code === 'ER_DUP_ENTRY') {
@@ -105,11 +105,11 @@ class User {
         }
     }
 
-    // 사용자 조회 (로그인용)
+    // ?�용??조회 (로그?�용)
     static async findByUsername(username) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT * FROM users WHERE username = ?', [username]);
             const user = rows[0] || null;
             return user ? this.convertBigIntToString(user) : null;
@@ -121,11 +121,11 @@ class User {
         }
     }
 
-    // 사용자 조회 (ID로)
+    // ?�용??조회 (ID�?
     static async findById(id) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT id, username, email, created_at FROM users WHERE id = ?', [id]);
             const user = rows[0] || null;
             return user ? this.convertBigIntToString(user) : null;
@@ -137,11 +137,11 @@ class User {
         }
     }
 
-    // 이메일 중복 확인
+    // ?�메??중복 ?�인
     static async findByEmail(email) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
             const user = rows[0] || null;
             return user ? this.convertBigIntToString(user) : null;
@@ -153,22 +153,22 @@ class User {
         }
     }
 
-    // 비밀번호 검증
+    // 비�?번호 검�?
     static verifyPassword(password, hash, salt) {
         const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
         return hash === verifyHash;
     }
 
-    // 비밀번호 변경
+    // 비�?번호 변�?
     static async updatePassword(userId, newPassword) {
         const salt = crypto.randomBytes(16).toString('hex');
         const hash = crypto.pbkdf2Sync(newPassword, salt, 1000, 64, 'sha512').toString('hex');
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const result = await conn.query('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?', [hash, salt, userId]);
             
-            // BigInt를 문자열로 변환
+            // BigInt�?문자?�로 변??
             const updatedRows = typeof result.affectedRows === 'bigint' 
                 ? result.affectedRows.toString() 
                 : result.affectedRows;

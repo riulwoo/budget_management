@@ -1,11 +1,11 @@
-const pool = require('../config/database');
+const { pool, getUtf8Connection } = require('../config/database');
 
 class InitialBalance {
-    // 사용자의 초기 자본금 조회
+    // ?�용?�의 초기 ?�본�?조회
     static async getByUserId(userId) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT * FROM initial_balance WHERE user_id = ?', [userId]);
             const row = rows[0] || null;
             if (row) {
@@ -21,11 +21,11 @@ class InitialBalance {
         }
     }
 
-    // 초기 자본금 설정 또는 업데이트
+    // 초기 ?�본�??�정 ?�는 ?�데?�트
     static async setBalance(userId, amount) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             // MariaDB UPSERT
             const result = await conn.query(
                 `INSERT INTO initial_balance (user_id, amount, updated_at)
@@ -41,11 +41,11 @@ class InitialBalance {
         }
     }
 
-    // 사용자의 총 잔액 계산 (초기 자본금 + 모든 거래)
+    // ?�용?�의 �??�액 계산 (초기 ?�본�?+ 모든 거래)
     static async calculateTotalBalance(userId) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const query = `
                 SELECT 
                     COALESCE(ib.amount, 0) as initial_balance,

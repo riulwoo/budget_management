@@ -2,6 +2,13 @@
 -- MariaDB/MySQL DDL
 -- Created: October 2025
 
+-- UTF-8 charset 강제 설정 (리눅스 환경 대응)
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_uca1400_ai_ci';
+SET character_set_client = utf8mb4;
+SET character_set_connection = utf8mb4;
+SET character_set_results = utf8mb4;
+SET collation_connection = utf8mb4_uca1400_ai_ci;
+
 -- 기존 테이블 삭제 (외래키 순서에 따라 역순으로)
 DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS memos;
@@ -20,7 +27,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_username (username),
     INDEX idx_email (email)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 카테고리 테이블 (계층형 구조 지원)
 CREATE TABLE categories (
@@ -37,7 +44,7 @@ CREATE TABLE categories (
     INDEX idx_user_type (user_id, type),
     INDEX idx_parent (parent_id),
     INDEX idx_type (type)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 거래 내역 테이블
 CREATE TABLE transactions (
@@ -60,7 +67,7 @@ CREATE TABLE transactions (
     INDEX idx_category (category_id),
     INDEX idx_date (date),
     INDEX idx_type (type)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 초기 잔액 테이블
 CREATE TABLE initial_balance (
@@ -70,7 +77,7 @@ CREATE TABLE initial_balance (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 기본 카테고리 데이터 삽입
 INSERT INTO categories (name, type, color, user_id, parent_id) VALUES
@@ -161,7 +168,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     old_values JSON NULL,
     new_values JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 기존 트리거 삭제
 DROP TRIGGER IF EXISTS tr_transactions_insert;
@@ -219,7 +226,7 @@ CREATE TABLE IF NOT EXISTS memos (
     INDEX idx_user_priority (user_id, priority),
     INDEX idx_visibility (visibility),
     INDEX idx_created_at (created_at)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- 메모 샘플 데이터 (user_id = 1 가정) - 사용자 생성 후 실행
 -- INSERT INTO memos (user_id, title, content, date, priority, visibility) VALUES 

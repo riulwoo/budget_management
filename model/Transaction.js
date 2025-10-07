@@ -1,11 +1,11 @@
-const pool = require('../config/database');
+const { pool, getUtf8Connection } = require('../config/database');
 
 class Transaction {
-    // 모든 거래 내역 조회 (사용자별)
+    // 모든 거래 ?�역 조회 (?�용?�별)
     static async getAll(userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = `
                 SELECT t.*, c.name as category_name, c.color as category_color,
                        DATE_FORMAT(t.date, '%Y-%m-%d') as date_formatted
@@ -19,7 +19,7 @@ class Transaction {
             }
             query += ' ORDER BY t.date DESC, t.created_at DESC';
             const rows = await conn.query(query, params);
-            // date 필드를 문자열로 변환
+            // date ?�드�?문자?�로 변??
             return rows.map(row => ({
                 ...row,
                 date: row.date_formatted || (row.date ? row.date.toISOString().split('T')[0] : null)
@@ -31,13 +31,13 @@ class Transaction {
         }
     }
 
-    // 월별 거래 내역 조회 (사용자별)
+    // ?�별 거래 ?�역 조회 (?�용?�별)
     static async getByMonth(year, month, userId = null) {
         const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
         const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = `
                 SELECT t.*, c.name as category_name, c.color as category_color,
                        DATE_FORMAT(t.date, '%Y-%m-%d') as date_formatted
@@ -52,7 +52,7 @@ class Transaction {
             }
             query += ' ORDER BY t.date DESC, t.created_at DESC';
             const rows = await conn.query(query, params);
-            // date 필드를 문자열로 변환
+            // date ?�드�?문자?�로 변??
             return rows.map(row => ({
                 ...row,
                 date: row.date_formatted || (row.date ? row.date.toISOString().split('T')[0] : null)
@@ -64,20 +64,20 @@ class Transaction {
         }
     }
 
-    // 거래 내역 추가
+    // 거래 ?�역 추�?
     static async create(transactionData) {
         const { amount, description, category_id, type, date, user_id, account, card, memo } = transactionData;
-        console.log('거래 생성 데이터:', { user_id, user_id_type: typeof user_id, transactionData });
+        console.log('거래 ?�성 ?�이??', { user_id, user_id_type: typeof user_id, transactionData });
         
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const result = await conn.query(
                 'INSERT INTO transactions (amount, description, category_id, type, date, user_id, account, card, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [amount, description, category_id, type, date, user_id, account || null, card || null, memo || null]
             );
             
-            console.log('거래 생성 완료:', { insertId: result.insertId, user_id });
+            console.log('거래 ?�성 ?�료:', { insertId: result.insertId, user_id });
             
             return { 
                 id: result.insertId, 
@@ -85,19 +85,19 @@ class Transaction {
                 date: typeof date === 'string' ? date : date.toISOString().split('T')[0]
             };
         } catch (err) {
-            console.error('거래 생성 오류:', err);
+            console.error('거래 ?�성 ?�류:', err);
             throw err;
         } finally {
             if (conn) conn.release();
         }
     }
 
-    // 거래 내역 수정
+    // 거래 ?�역 ?�정
     static async update(id, transactionData, userId = null) {
         const { amount, description, category_id, type, date, account, card, memo } = transactionData;
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'UPDATE transactions SET amount = ?, description = ?, category_id = ?, type = ?, date = ?, account = ?, card = ?, memo = ? WHERE id = ?';
             let params = [amount, description, category_id, type, date, account || null, card || null, memo || null, id];
             if (userId) {
@@ -117,11 +117,11 @@ class Transaction {
         }
     }
 
-    // 거래 내역 삭제 (async/await + pool)
+    // 거래 ?�역 ??�� (async/await + pool)
     static async delete(id, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'DELETE FROM transactions WHERE id = ?';
             let params = [id];
             if (userId) {
@@ -129,7 +129,7 @@ class Transaction {
                 params.push(userId);
             }
             const result = await conn.query(query, params);
-            // result.affectedRows: 삭제된 행 수 (MariaDB)
+            // result.affectedRows: ??��??????(MariaDB)
             return { deletedRows: result.affectedRows };
         } catch (err) {
             throw err;
@@ -138,11 +138,11 @@ class Transaction {
         }
     }
 
-    // 월별 통계 조회 (사용자별, async/await + pool)
+    // ?�별 ?�계 조회 (?�용?�별, async/await + pool)
     static async getMonthlyStats(year, month, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
             const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
             let query = `
@@ -178,11 +178,11 @@ class Transaction {
         }
     }
 
-    // 카테고리별 통계 조회 (사용자별, async/await + pool)
+    // 카테고리�??�계 조회 (?�용?�별, async/await + pool)
     static async getCategoryStats(year, month, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
             const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
             let query = `
@@ -211,15 +211,15 @@ class Transaction {
         }
     }
 
-    // 거래 내역 소유권 확인 (async/await + pool)
+    // 거래 ?�역 ?�유�??�인 (async/await + pool)
     static async isOwner(transactionId, userId) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT user_id FROM transactions WHERE id = ?', [transactionId]);
             const row = rows[0];
             
-            console.log('isOwner 확인:', {
+            console.log('isOwner ?�인:', {
                 transactionId: transactionId,
                 userId: userId,
                 dbResult: row,
@@ -230,10 +230,10 @@ class Transaction {
                 isEqualStrict: row && parseInt(row.user_id) === parseInt(userId)
             });
             
-            // 타입 변환하여 비교 (문자열/숫자 불일치 문제 해결)
+            // ?�??변?�하??비교 (문자???�자 불일�?문제 ?�결)
             return row && parseInt(row.user_id) === parseInt(userId);
         } catch (err) {
-            console.error('isOwner 오류:', err);
+            console.error('isOwner ?�류:', err);
             throw err;
         } finally {
             if (conn) conn.release();

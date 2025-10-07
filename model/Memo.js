@@ -1,6 +1,6 @@
-const pool = require('../config/database');
+const { pool, getUtf8Connection } = require('../config/database');
 
-// BigInt 및 날짜 변환 함수
+// BigInt �??�짜 변???�수
 function convertBigIntToString(obj) {
     if (obj === null || obj === undefined) return obj;
     
@@ -18,10 +18,10 @@ function convertBigIntToString(obj) {
             if (typeof value === 'bigint') {
                 converted[key] = String(value);
             } else if (key === 'date' && value instanceof Date) {
-                // Date 객체를 YYYY-MM-DD 형식으로 변환
+                // Date 객체�?YYYY-MM-DD ?�식?�로 변??
                 converted[key] = value.toISOString().split('T')[0];
             } else if (key === 'created_at' || key === 'updated_at') {
-                // 타임스탬프 필드 처리
+                // ?�?�스?�프 ?�드 처리
                 if (value instanceof Date) {
                     converted[key] = value.toISOString();
                 } else {
@@ -38,11 +38,11 @@ function convertBigIntToString(obj) {
 }
 
 class Memo {
-    // 내 메모 조회 (페이징 포함)
+    // ??메모 조회 (?�이�??�함)
     static async getMy(userId, page = 1, limit = 10, search = '') {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const offset = (page - 1) * limit;
             
             let whereClause = 'WHERE m.user_id = ?';
@@ -53,7 +53,7 @@ class Memo {
                 params.push(`%${search}%`, `%${search}%`);
             }
             
-            // 전체 개수 조회
+            // ?�체 개수 조회
             const countQuery = `SELECT COUNT(*) as total FROM memos m ${whereClause}`;
             const countResult = await conn.query(countQuery, params);
             const total = Number(countResult[0].total);
@@ -83,11 +83,11 @@ class Memo {
         }
     }
 
-    // 공개 메모 조회 (페이징 포함)
+    // 공개 메모 조회 (?�이�??�함)
     static async getPublic(page = 1, limit = 10, search = '') {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const offset = (page - 1) * limit;
             
             let whereClause = 'WHERE m.visibility = "public"';
@@ -98,7 +98,7 @@ class Memo {
                 params.push(`%${search}%`, `%${search}%`);
             }
             
-            // 전체 개수 조회
+            // ?�체 개수 조회
             const countQuery = `SELECT COUNT(*) as total FROM memos m ${whereClause}`;
             const countResult = await conn.query(countQuery, params);
             const total = Number(countResult[0].total);
@@ -128,11 +128,11 @@ class Memo {
         }
     }
 
-    // 특정 날짜의 메모 조회
+    // ?�정 ?�짜??메모 조회
     static async getByDate(userId, date) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = `
                 SELECT m.*, u.username 
@@ -148,13 +148,13 @@ class Memo {
         }
     }
 
-    // 메모 생성
+    // 메모 ?�성
     static async create(memoData) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
-            console.log('DB 연결 성공, 메모 생성 시작');
+            console.log('DB ?�결 ?�공, 메모 ?�성 ?�작');
             
             const query = `
                 INSERT INTO memos (user_id, title, content, date, priority, visibility, is_completed) 
@@ -170,13 +170,13 @@ class Memo {
                 memoData.is_completed || false
             ];
             
-            console.log('쿼리 실행:', query);
+            console.log('쿼리 ?�행:', query);
             console.log('값들:', values);
             
             const result = await conn.query(query, values);
             console.log('쿼리 결과:', result);
             
-            // BigInt를 먼저 문자열로 변환
+            // BigInt�?먼�? 문자?�로 변??
             const memoWithId = {
                 id: String(result.insertId),
                 ...memoData
@@ -184,21 +184,21 @@ class Memo {
             
             return convertBigIntToString(memoWithId);
         } catch (error) {
-            console.error('Memo.create 오류:', error);
+            console.error('Memo.create ?�류:', error);
             throw error;
         } finally {
             if (conn) {
                 conn.release();
-                console.log('DB 연결 해제');
+                console.log('DB ?�결 ?�제');
             }
         }
     }
 
-    // 메모 수정
+    // 메모 ?�정
     static async update(id, memoData) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = `
                 UPDATE memos 
@@ -222,11 +222,11 @@ class Memo {
         }
     }
 
-    // 메모 삭제
+    // 메모 ??��
     static async delete(id) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = 'DELETE FROM memos WHERE id = ?';
             const result = await conn.query(query, [id]);
@@ -236,24 +236,24 @@ class Memo {
         }
     }
 
-    // 메모 소유자 확인
+    // 메모 ?�유???�인
     static async isOwner(memoId, userId) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = 'SELECT user_id FROM memos WHERE id = ?';
             const result = await conn.query(query, [memoId]);
             
             if (result.length === 0) {
-                console.log('메모를 찾을 수 없음:', memoId);
+                console.log('메모�?찾을 ???�음:', memoId);
                 return false;
             }
             
             const dbUserId = String(result[0].user_id);
             const requestUserId = String(userId);
             
-            console.log('소유자 확인:', { 
+            console.log('?�유???�인:', { 
                 memoId, 
                 dbUserId, 
                 requestUserId, 
@@ -266,11 +266,11 @@ class Memo {
         }
     }
 
-    // 메모 완료 상태 토글
+    // 메모 ?�료 ?�태 ?��?
     static async toggleComplete(id) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = 'UPDATE memos SET is_completed = NOT is_completed WHERE id = ?';
             const result = await conn.query(query, [id]);
@@ -280,11 +280,11 @@ class Memo {
         }
     }
 
-    // ID로 단일 메모 조회
+    // ID�??�일 메모 조회
     static async getById(id) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             
             const query = `
                 SELECT m.*, u.username 

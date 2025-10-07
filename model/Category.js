@@ -1,11 +1,11 @@
-const pool = require('../config/database');
+const { pool, getUtf8Connection } = require('../config/database');
 
 class Category {
-    // 모든 카테고리 + 사용 현황(거래수, 총금액, 마지막 사용일) 반환
+    // 모든 카테고리 + ?�용 ?�황(거래?? 총금?? 마�?�??�용?? 반환
     static async getAllWithUsage(userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'SELECT * FROM categories';
             let params = [];
             if (userId) {
@@ -14,14 +14,14 @@ class Category {
             }
             query += ' ORDER BY type, name';
             const categories = await conn.query(query, params);
-            // 각 카테고리별 사용 현황 조회
+            // �?카테고리�??�용 ?�황 조회
             const result = [];
             for (const cat of categories) {
-                // BigInt -> String 변환
+                // BigInt -> String 변??
                 for (const key in cat) {
                     if (typeof cat[key] === 'bigint') cat[key] = cat[key].toString();
                 }
-                // 사용 현황 쿼리
+                // ?�용 ?�황 쿼리
                 let usageQuery = `SELECT COUNT(*) as total_count, SUM(amount) as total_amount, MAX(date) as last_used FROM transactions WHERE category_id = ?`;
                 let usageParams = [cat.id];
                 if (userId) {
@@ -47,11 +47,11 @@ class Category {
         }
     }
 
-    // 모든 카테고리 조회 (사용자별)
+    // 모든 카테고리 조회 (?�용?�별)
     static async getAll(userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'SELECT * FROM categories';
             let params = [];
             if (userId) {
@@ -73,11 +73,11 @@ class Category {
         }
     }
 
-    // 타입별 카테고리 조회 (사용자별)
+    // ?�?�별 카테고리 조회 (?�용?�별)
     static async getByType(type, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'SELECT * FROM categories WHERE type = ?';
             let params = [type];
             if (userId) {
@@ -99,13 +99,13 @@ class Category {
         }
     }
 
-    // 카테고리 추가
-    // parent_id: null(대분류), 대분류id(중분류), 중분류id(소분류)
+    // 카테고리 추�?
+    // parent_id: null(?�분류), ?�분류id(중분�?, 중분류id(?�분�?
     static async create(categoryData) {
         const { name, type, color, user_id, parent_id = null } = categoryData;
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const result = await conn.query(
                 'INSERT INTO categories (name, type, color, user_id, parent_id) VALUES (?, ?, ?, ?, ?)',
                 [name, type, color, user_id, parent_id]
@@ -118,12 +118,12 @@ class Category {
         }
     }
 
-    // 카테고리 수정
+    // 카테고리 ?�정
     static async update(id, categoryData, userId = null) {
         const { name, type, color, parent_id = null } = categoryData;
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'UPDATE categories SET name = ?, type = ?, color = ?, parent_id = ? WHERE id = ?';
             let params = [name, type, color, parent_id, id];
             if (userId) {
@@ -139,11 +139,11 @@ class Category {
         }
     }
 
-    // 카테고리 삭제
+    // 카테고리 ??��
     static async delete(id, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = 'DELETE FROM categories WHERE id = ?';
             let params = [id];
             if (userId) {
@@ -159,11 +159,11 @@ class Category {
         }
     }
 
-    // 카테고리 소유권 확인
+    // 카테고리 ?�유�??�인
     static async isOwner(categoryId, userId) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             const rows = await conn.query('SELECT user_id FROM categories WHERE id = ?', [categoryId]);
             const row = rows[0];
             if (row) {
@@ -179,11 +179,11 @@ class Category {
         }
     }
 
-    // 카테고리 사용 현황 조회
+    // 카테고리 ?�용 ?�황 조회
     static async getUsageStats(categoryId, userId = null) {
         let conn;
         try {
-            conn = await pool.getConnection();
+            conn = await getUtf8Connection();
             let query = `
                 SELECT 
                     COUNT(*) as total_count,
