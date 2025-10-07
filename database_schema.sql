@@ -2,7 +2,8 @@
 -- MariaDB/MySQL DDL
 -- Created: October 2025
 
--- 기존 테이블 삭제 (역순으로)
+-- 기존 테이블 삭제 (외래키 순서에 따라 역순으로)
+DROP TABLE IF EXISTS memos;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS initial_balance;
 DROP TABLE IF EXISTS categories;
