@@ -3,21 +3,21 @@
 -- Created: October 2025
 
 -- UTF-8 charset 강제 설정 (리눅스 환경 대응)
-SET NAMES 'utf8mb4' COLLATE 'utf8mb4_uca1400_ai_ci';
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci';
 SET character_set_client = utf8mb4;
 SET character_set_connection = utf8mb4;
 SET character_set_results = utf8mb4;
-SET collation_connection = utf8mb4_uca1400_ai_ci;
+SET collation_connection = utf8mb4_general_ci;
 
--- 기존 테이블 삭제 (외래키 순서에 따라 역순으로)
+-- 기존 테이블 삭제 (재생성 시 컬럼 타입 변경 등 문제 방지)
 DROP TABLE IF EXISTS audit_log;
-DROP TABLE IF EXISTS memos;
+DROP TABLE IF EXISTS memos; 
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS initial_balance;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
 
--- 사용자 테이블
+-- 사용자 테이블 생성
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -27,9 +27,9 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_username (username),
     INDEX idx_email (email)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 카테고리 테이블 (계층형 구조 지원)
+-- 카테고리 테이블 생성 (계층 구조 지원)
 CREATE TABLE categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -44,9 +44,9 @@ CREATE TABLE categories (
     INDEX idx_user_type (user_id, type),
     INDEX idx_parent (parent_id),
     INDEX idx_type (type)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 거래 내역 테이블
+-- 거래 테이블 생성
 CREATE TABLE transactions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     amount DECIMAL(15,2) NOT NULL,
@@ -67,9 +67,9 @@ CREATE TABLE transactions (
     INDEX idx_category (category_id),
     INDEX idx_date (date),
     INDEX idx_type (type)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 초기 잔액 테이블
+-- 초기 잔액 테이블 생성
 CREATE TABLE initial_balance (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL UNIQUE,
@@ -77,24 +77,24 @@ CREATE TABLE initial_balance (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 기본 카테고리 데이터 삽입
+-- 기본 카테고리 데이터 입력
 INSERT INTO categories (name, type, color, user_id, parent_id) VALUES
--- 수입 카테고리 (시스템 기본)
+-- 수입 카테고리 (사용자 기본)
 ('급여', 'income', '#4CAF50', NULL, NULL),
-('부업', 'income', '#8BC34A', NULL, NULL),
-('투자', 'income', '#FF9800', NULL, NULL),
+('부수입', 'income', '#8BC34A', NULL, NULL),
+('이자', 'income', '#FF9800', NULL, NULL),
 ('기타수입', 'income', '#607D8B', NULL, NULL),
 
--- 지출 카테고리 (시스템 기본)
+-- 지출 카테고리 (사용자 기본)
 ('식비', 'expense', '#F44336', NULL, NULL),
 ('교통비', 'expense', '#2196F3', NULL, NULL),
 ('주거비', 'expense', '#9C27B0', NULL, NULL),
 ('통신비', 'expense', '#3F51B5', NULL, NULL),
 ('의료비', 'expense', '#009688', NULL, NULL),
 ('교육비', 'expense', '#FF5722', NULL, NULL),
-('문화생활', 'expense', '#E91E63', NULL, NULL),
+('문화생활비', 'expense', '#E91E63', NULL, NULL),
 ('쇼핑', 'expense', '#795548', NULL, NULL),
 ('여행', 'expense', '#00BCD4', NULL, NULL),
 ('기타지출', 'expense', '#9E9E9E', NULL, NULL);
@@ -104,7 +104,7 @@ CREATE INDEX idx_transactions_user_category_date ON transactions(user_id, catego
 CREATE INDEX idx_transactions_amount ON transactions(amount);
 CREATE INDEX idx_categories_name ON categories(name);
 
--- 뷰 생성 (사용 통계 포함 카테고리)
+-- 카테고리별 사용 통계
 CREATE OR REPLACE VIEW categories_with_usage AS
 SELECT 
     c.*,
@@ -122,7 +122,7 @@ LEFT JOIN (
     GROUP BY category_id
 ) t ON c.id = t.category_id;
 
--- 사용자별 월간 통계 뷰
+-- 사용자별 월간 통계 뷰 생성
 CREATE OR REPLACE VIEW monthly_stats AS
 SELECT 
     user_id,
@@ -138,7 +138,7 @@ GROUP BY user_id, YEAR(date), MONTH(date), type;
 -- 기존 프로시저 삭제
 DROP PROCEDURE IF EXISTS GetUserBalance;
 
--- 권한 및 제약조건 확인을 위한 프로시저 (선택사항)
+-- 권한 체크를 위한 프로시저 생성 (선택적 항목)
 DELIMITER //
 CREATE PROCEDURE GetUserBalance(IN p_user_id BIGINT)
 BEGIN
@@ -158,7 +158,7 @@ BEGIN
 END //
 DELIMITER ;
 
--- 트리거 생성 (감사 로그 등)
+-- 감사 로그 테이블 생성
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     table_name VARCHAR(50) NOT NULL,
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     old_values JSON NULL,
     new_values JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 기존 트리거 삭제
 DROP TRIGGER IF EXISTS tr_transactions_insert;
@@ -226,12 +226,12 @@ CREATE TABLE IF NOT EXISTS memos (
     INDEX idx_user_priority (user_id, priority),
     INDEX idx_visibility (visibility),
     INDEX idx_created_at (created_at)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 메모 샘플 데이터 (user_id = 1 가정) - 사용자 생성 후 실행
+-- 메모 샘플 데이터 삽입 (user_id = 1 가정)
 -- INSERT INTO memos (user_id, title, content, date, priority, visibility) VALUES 
--- (1, '월급 입금 확인하기', '매월 25일 월급이 정상적으로 입금되었는지 확인하고 가계부에 기록', '2025-10-07', 'high', 'private'),
--- (1, '투자 팁 공유', '분기별 투자 성과를 분석하고 리밸런싱 필요 여부 검토\n- 주식 60%\n- 채권 30%\n- 현금 10%', '2025-10-07', 'medium', 'public'),
--- (1, '가계부 정리', '이번 달 지출 내역을 카테고리별로 분석하고 다음 달 예산 계획 수립', '2025-10-06', 'medium', 'private'),
--- (1, '보험료 납입', '자동차보험과 건강보험료 납입일 확인', '2025-10-05', 'high', 'private'),
--- (1, '아이디어 메모', '새로운 부업 아이디어\n- 온라인 강의 제작\n- 블로그 운영\n- 투자 관련 컨설팅', '2025-10-04', 'low', 'private');
+-- (1, '급여 이체', '매월 25일 급여 이체가 이루어짐을 인지하고 가계부에 기록', '2025-10-07', 'high', 'private'),
+-- (1, '자산 재조정', '분기별 자산 과거 분석하고 리밸런싱 필요성 검토 - 주식 60%\n- 채권 30%\n- 예금 10%', '2025-10-07', 'medium', 'public'),
+-- (1, '가계부 정리', '이번 주지출내역카테고리별로 분석하고 다음 예산 계획 수립', '2025-10-06', 'medium', 'private'),
+-- (1, '보험료 납입', '자동차보험과 건강보험료 납입일', '2025-10-05', 'high', 'private'),
+-- (1, '아이디어 메모', '프로젝트 아이디어\n- 자료조사\n- 블로그작성\n- 전문가 컨설팅', '2025-10-04', 'low', 'private');

@@ -8,7 +8,7 @@ const pool = mariadb.createPool({
     password: process.env.DB_PASSWORD || 'root',
     database: process.env.DB_NAME || 'budget_management',
     charset: 'utf8mb4',            // UTF-8 한글 지원
-    collation: 'utf8mb4_uca1400_ai_ci',  // 한글 정렬 및 비교 지원
+    collation: 'utf8mb4_general_ci',     // 범용 collation (가장 안전)
     connectionLimit: 5,            // 연결 수 감소 (개발환경)
     acquireTimeout: 10000,         // 연결 획득 타임아웃 10초
     timeout: 5000,                 // 쿼리 타임아웃 5초
@@ -29,11 +29,11 @@ pool.getConnection()
         
         // 리눅스 환경에서 charset 강제 설정
         try {
-            await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_uca1400_ai_ci'");
+            await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci'");
             await conn.query("SET character_set_client = utf8mb4");
             await conn.query("SET character_set_connection = utf8mb4");
             await conn.query("SET character_set_results = utf8mb4");
-            await conn.query("SET collation_connection = utf8mb4_uca1400_ai_ci");
+            await conn.query("SET collation_connection = utf8mb4_general_ci");
             console.log('✓ UTF-8 charset configured successfully');
         } catch (charsetErr) {
             console.warn('⚠ Charset configuration warning:', charsetErr.message);
@@ -61,8 +61,8 @@ pool.on('acquire', async (conn) => {
     
     // 연결 획득 시마다 charset 강제 설정 (리눅스 환경 대응)
     try {
-        await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_uca1400_ai_ci'");
-        await conn.query("SET collation_connection = utf8mb4_uca1400_ai_ci");
+        await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci'");
+        await conn.query("SET collation_connection = utf8mb4_general_ci");
     } catch (err) {
         console.warn('Charset setting warning on connection acquire:', err.message);
     }
@@ -76,11 +76,11 @@ pool.on('release', (conn) => {
 const getUtf8Connection = async () => {
     const conn = await pool.getConnection();
     try {
-        await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_uca1400_ai_ci'");
+        await conn.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci'");
         await conn.query("SET character_set_client = utf8mb4");
         await conn.query("SET character_set_connection = utf8mb4");  
         await conn.query("SET character_set_results = utf8mb4");
-        await conn.query("SET collation_connection = utf8mb4_uca1400_ai_ci");
+        await conn.query("SET collation_connection = utf8mb4_general_ci");
         return conn;
     } catch (err) {
         conn.release();

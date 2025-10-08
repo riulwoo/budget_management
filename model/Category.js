@@ -1,7 +1,7 @@
 const { pool, getUtf8Connection } = require('../config/database');
 
 class Category {
-    // 모든 카테고리 + ?�용 ?�황(거래?? 총금?? 마�?�??�용?? 반환
+    // 모든 카테고리 + 사용 통계(거래 건수, 총금액, 마지막 사용일) 반환
     static async getAllWithUsage(userId = null) {
         let conn;
         try {
@@ -14,14 +14,14 @@ class Category {
             }
             query += ' ORDER BY type, name';
             const categories = await conn.query(query, params);
-            // �?카테고리�??�용 ?�황 조회
+            // 카테고리 사용 통계 조회
             const result = [];
             for (const cat of categories) {
-                // BigInt -> String 변??
+                // BigInt -> String 변환
                 for (const key in cat) {
                     if (typeof cat[key] === 'bigint') cat[key] = cat[key].toString();
                 }
-                // ?�용 ?�황 쿼리
+                // 사용 통계 쿼리
                 let usageQuery = `SELECT COUNT(*) as total_count, SUM(amount) as total_amount, MAX(date) as last_used FROM transactions WHERE category_id = ?`;
                 let usageParams = [cat.id];
                 if (userId) {
@@ -47,7 +47,7 @@ class Category {
         }
     }
 
-    // 모든 카테고리 조회 (?�용?�별)
+    // 모든 카테고리 조회 (사용자별)
     static async getAll(userId = null) {
         let conn;
         try {
@@ -73,7 +73,7 @@ class Category {
         }
     }
 
-    // ?�?�별 카테고리 조회 (?�용?�별)
+    // 사용자별 카테고리 조회 (사용자별)
     static async getByType(type, userId = null) {
         let conn;
         try {
@@ -99,8 +99,8 @@ class Category {
         }
     }
 
-    // 카테고리 추�?
-    // parent_id: null(?�분류), ?�분류id(중분�?, 중분류id(?�분�?
+    // 카테고리 추가
+    // parent_id: null(대분류), 중분류id(중분류), 소분류id(소분류)
     static async create(categoryData) {
         const { name, type, color, user_id, parent_id = null } = categoryData;
         let conn;
@@ -118,7 +118,7 @@ class Category {
         }
     }
 
-    // 카테고리 ?�정
+    // 카테고리 수정
     static async update(id, categoryData, userId = null) {
         const { name, type, color, parent_id = null } = categoryData;
         let conn;
@@ -139,7 +139,7 @@ class Category {
         }
     }
 
-    // 카테고리 ??��
+    // 카테고리 삭제
     static async delete(id, userId = null) {
         let conn;
         try {
@@ -159,7 +159,7 @@ class Category {
         }
     }
 
-    // 카테고리 ?�유�??�인
+    // 카테고리 소유자인지 확인
     static async isOwner(categoryId, userId) {
         let conn;
         try {
@@ -179,7 +179,7 @@ class Category {
         }
     }
 
-    // 카테고리 ?�용 ?�황 조회
+    // 카테고리 사용 통계 조회
     static async getUsageStats(categoryId, userId = null) {
         let conn;
         try {
