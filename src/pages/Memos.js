@@ -556,7 +556,7 @@ const Memos = () => {
                 <div className="col-md-2">
                   <button 
                     type="submit" 
-                    className="btn btn-primary w-100"
+                    className="btn btn-primary w-100 rounded-pill"
                   >
                     <i className="fas fa-search me-1"></i>검색
                   </button>

@@ -1,6 +1,8 @@
 /* 메인 레이아웃 */
 .layout-container {
   min-height: 100vh;
+  width: 100%;
+  display: block; /* 모바일 기본값 */
 }
 
 .sidebar {
@@ -69,20 +71,35 @@
   
   .layout-container {
     display: flex !important;
+    min-height: 100vh;
+    width: 100%;
   }
   
   .sidebar {
-    position: relative;
+    position: relative !important;
     flex: 0 0 250px;
-    width: 250px;
-    display: block;
+    width: 250px !important;
+    display: block !important;
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+    height: 100vh;
+    overflow-y: auto;
   }
   
   .main-content {
     flex: 1;
     padding: 2rem;
-    margin-top: 0;
-    width: auto;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    width: auto !important;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+  
+  /* PC에서 모바일 오버레이 숨김 */
+  .mobile-overlay {
+    display: none !important;
   }
 }
 
@@ -200,6 +217,49 @@
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-left: 4px solid rgba(255, 255, 255, 0.8);
+}
+
+/* 전역 검색 스타일 */
+.search-container {
+  position: relative;
+}
+
+.search-container .fas.fa-search {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  color: #6c757d;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.search-container input.form-control {
+  padding-left: 3rem !important;
+  border-radius: 25px;
+}
+
+/* PC 버전 검색 스타일 */
+@media (min-width: 768px) {
+  .search-container .fas.fa-search {
+    font-size: 1rem;
+  }
+  
+  .search-container input.form-control {
+    font-size: 1rem;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+  }
+  
+  /* PC 버전 검색 버튼 높이 맞춤 */
+  .search-container .btn {
+    height: calc(2.25rem + 2px) !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 }
 
 /* 사용자 정보 및 인증 버튼 스타일 */
@@ -1291,9 +1351,34 @@ html, body {
     outline: none;
   }
   
-  /* 데스크톱에서는 기본 Bootstrap 스타일 사용 */
+  /* PC 버전 검색 아이콘 위치 조정 */
+  .memos-page .position-relative .fas.fa-search {
+    position: absolute;
+    left: 1rem !important;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    color: #6c757d;
+    font-size: 1rem;
+    pointer-events: none;
+  }
+  
+  /* PC 버전 검색 input 패딩 조정 */
   .memos-page .position-relative input {
-    padding-left: inherit !important;
+    padding-left: 4rem !important;
+    padding-right: 1rem;
+    font-size: 1rem;
+  }
+  
+  /* PC 버전 검색 버튼 높이 맞춤 */
+  .memos-page .btn-primary {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 1rem !important;
+    height: 100% !important; /* form-control과 동일한 높이 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 80px;
   }
 }
 
