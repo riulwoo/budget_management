@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CategoryEditModal = ({ show, onHide, onSubmit, title, category = null, parentOptions = [], level = 'main', activeType = 'expense', showTypeSelection = false }) => {
+const CategoryEditModal = ({ show, onHide, onSubmit, title, category = null, parentOptions = [], level = 'main', activeType = 'expense', showTypeSelection = false, defaultParentId = null }) => {
   const [formData, setFormData] = useState({
     name: '',
     type: activeType,
@@ -12,6 +12,7 @@ const CategoryEditModal = ({ show, onHide, onSubmit, title, category = null, par
 
   useEffect(() => {
     if (category) {
+      // 편집 모드: 기존 카테고리 데이터 사용
       setFormData({
         name: category.name || '',
         type: category.type || activeType,
@@ -19,14 +20,16 @@ const CategoryEditModal = ({ show, onHide, onSubmit, title, category = null, par
         parent_id: category.parent_id || null
       });
     } else {
+      // 추가 모드: defaultParentId가 있으면 자동 선택
+      console.log('CategoryEditModal 추가 모드:', { level, defaultParentId, parentOptions });
       setFormData({
         name: '',
         type: activeType,
         color: '#007bff',
-        parent_id: null
+        parent_id: defaultParentId || null
       });
     }
-  }, [category, show, activeType]);
+  }, [category, show, activeType, defaultParentId, level, parentOptions]);
 
   const handleChange = (e) => {
     setFormData({

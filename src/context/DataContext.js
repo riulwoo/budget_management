@@ -226,8 +226,21 @@ export const DataProvider = ({ children }) => {
         token: authToken
       });
       
-      // 거래내역 다시 로드
+      // 캐시된 데이터 초기화하여 강제로 새로고침
       const [year, month] = currentMonth.split('-');
+      const transactionKey = `transactions-${year}-${month}`;
+      const statsKey = `monthlyStats-${year}-${month}`;
+      const balanceKey = 'totalBalance';
+      
+      setLoadedData(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(transactionKey);
+        newSet.delete(statsKey);
+        newSet.delete(balanceKey);
+        return newSet;
+      });
+      
+      // 거래내역 다시 로드
       await loadTransactions(year, month);
       await loadMonthlyStats(year, month);
       await loadTotalBalance();
@@ -254,8 +267,21 @@ export const DataProvider = ({ children }) => {
       
       console.log('삭제 응답:', response);
       
-      // 거래내역 다시 로드
+      // 캐시된 데이터 초기화하여 강제로 새로고침
       const [year, month] = currentMonth.split('-');
+      const transactionKey = `transactions-${year}-${month}`;
+      const statsKey = `monthlyStats-${year}-${month}`;
+      const balanceKey = 'totalBalance';
+      
+      setLoadedData(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(transactionKey);
+        newSet.delete(statsKey);
+        newSet.delete(balanceKey);
+        return newSet;
+      });
+      
+      // 거래내역 다시 로드
       await loadTransactions(year, month);
       await loadMonthlyStats(year, month);
       await loadTotalBalance();
@@ -282,8 +308,21 @@ export const DataProvider = ({ children }) => {
         token: authToken
       });
       
-      // 거래내역 다시 로드
+      // 캐시된 데이터 초기화하여 강제로 새로고침
       const [year, month] = currentMonth.split('-');
+      const transactionKey = `transactions-${year}-${month}`;
+      const statsKey = `monthlyStats-${year}-${month}`;
+      const balanceKey = 'totalBalance';
+      
+      setLoadedData(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(transactionKey);
+        newSet.delete(statsKey);
+        newSet.delete(balanceKey);
+        return newSet;
+      });
+      
+      // 거래내역 다시 로드
       await loadTransactions(year, month);
       await loadMonthlyStats(year, month);
       await loadTotalBalance();
@@ -356,26 +395,6 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // 초기 자본금 설정
-  const setInitialBalance = async (amount) => {
-    try {
-      setLoading(true);
-      await apiCall('/balance/initial', {
-        method: 'POST',
-        body: JSON.stringify({ amount }),
-        token: authToken
-      });
-      
-      await loadTotalBalance();
-      return { success: true };
-    } catch (error) {
-      console.error('초기 자본금 설정 오류:', error);
-      return { success: false, message: error.message };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 페이지별 필요 데이터 확인
   const getRequiredDataForCurrentPage = () => {
     const path = window.location.pathname;
@@ -392,8 +411,8 @@ export const DataProvider = ({ children }) => {
         return []; // 메모는 별도 관리
       case '/statistics':
         return ['categories', 'monthlyStats', 'totalBalance'];
-      case '/balance-settings':
-        return ['totalBalance'];
+      case '/assets':
+        return ['totalBalance']; // 자산 관리는 별도 API 사용, 총 잔액만 필요
       default:
         return ['categories', 'transactions', 'monthlyStats', 'totalBalance'];
     }
@@ -500,6 +519,81 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // 자산 관리 함수들
+  const loadAssets = useCallback(async () => {
+    const key = 'assets';
+    
+    if (loadedData.has(key)) {
+      console.log('📋 Assets already loaded');
+      return;
+    }
+    
+    if (loadingStates.current.has(key)) {
+      console.log('⏳ Assets loading in progress, waiting...');
+      return loadingStates.current.get(key);
+    }
+    
+    const loadPromise = (async () => {
+      try {
+        console.log('🔄 Loading assets...');
+        setLoadedData(prev => new Set([...prev, key]));
+        const data = await apiCall('/assets', { token: authToken });
+        console.log('✅ Assets loaded:', data.length, 'items');
+        return data;
+      } catch (error) {
+        console.error('❌ 자산 로드 오류:', error);
+        setLoadedData(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(key);
+          return newSet;
+        });
+        throw error;
+      } finally {
+        loadingStates.current.delete(key);
+      }
+    })();
+    
+    loadingStates.current.set(key, loadPromise);
+    return loadPromise;
+  }, [authToken]);
+
+  const loadAssetTypes = useCallback(async () => {
+    const key = 'assetTypes';
+    
+    if (loadedData.has(key)) {
+      console.log('📋 Asset types already loaded');
+      return;
+    }
+    
+    if (loadingStates.current.has(key)) {
+      console.log('⏳ Asset types loading in progress, waiting...');
+      return loadingStates.current.get(key);
+    }
+    
+    const loadPromise = (async () => {
+      try {
+        console.log('🔄 Loading asset types...');
+        setLoadedData(prev => new Set([...prev, key]));
+        const data = await apiCall('/asset-types', { token: authToken });
+        console.log('✅ Asset types loaded:', data.length, 'items');
+        return data;
+      } catch (error) {
+        console.error('❌ 자산 유형 로드 오류:', error);
+        setLoadedData(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(key);
+          return newSet;
+        });
+        throw error;
+      } finally {
+        loadingStates.current.delete(key);
+      }
+    })();
+    
+    loadingStates.current.set(key, loadPromise);
+    return loadPromise;
+  }, [authToken]);
+
   const value = {
     categories,
     transactions,
@@ -512,14 +606,15 @@ export const DataProvider = ({ children }) => {
     loadTransactions,
     loadMonthlyStats,
     loadTotalBalance,
+    loadAssets,
+    loadAssetTypes,
     invalidateData, // 데이터 무효화 함수
     addTransaction,
     updateTransaction,
     deleteTransaction,
     addCategory,
     updateCategory,
-    deleteCategory,
-    setInitialBalance
+    deleteCategory
   };
 
   return (

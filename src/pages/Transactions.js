@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { formatAmount, formatDate } from '../utils/api';
-import TransactionModal from '../components/modals/TransactionModal';
+
+const TransactionModal = lazy(() => import('../components/modals/TransactionModal'));
 
 const Transactions = () => {
   const { currentUser } = useAuth();
@@ -75,15 +76,22 @@ const Transactions = () => {
               <div key={transaction.id} className="d-flex justify-content-between align-items-center mb-3 p-3 border rounded transaction-item">
                 <div>
                   <div className="fw-bold">{transaction.description || '설명 없음'}</div>
-                  <small className="text-muted">{formatDate(transaction.date)}</small>
-                  {transaction.category_name && (
-                    <span 
-                      className="badge category-badge ms-2" 
-                      style={{ backgroundColor: transaction.category_color }}
-                    >
-                      {transaction.category_name}
-                    </span>
-                  )}
+                  <div className="d-flex align-items-center flex-wrap">
+                    <small className="text-muted me-2">{formatDate(transaction.date)}</small>
+                    {transaction.asset_name && (
+                      <span className="badge bg-info text-dark me-2">
+                        <i className={transaction.asset_icon || 'fas fa-wallet'}></i> {transaction.asset_name}
+                      </span>
+                    )}
+                    {transaction.category_name && (
+                      <span 
+                        className="badge category-badge" 
+                        style={{ backgroundColor: transaction.category_color }}
+                      >
+                        {transaction.category_name}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-end">
                   <div className={`fw-bold ${transaction.type === 'income' ? 'income' : 'expense'}`}>
@@ -114,12 +122,28 @@ const Transactions = () => {
         </div>
       </div>
 
-      <TransactionModal 
-        show={showTransactionModal}
-        onHide={handleModalHide}
-        onSubmit={handleModalSubmit}
-        transaction={editingTransaction}
-      />
+      {showTransactionModal && (
+        <Suspense fallback={
+          <div className="modal fade show" style={{display: 'block'}}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-body text-center p-4">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">로딩 중...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }>
+          <TransactionModal 
+            show={showTransactionModal}
+            onHide={handleModalHide}
+            onSubmit={handleModalSubmit}
+            transaction={editingTransaction}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

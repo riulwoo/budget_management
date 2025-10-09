@@ -1,7 +1,55 @@
-/* Transaction Modal Styles */
+/* Transaction Modal Styles - 강제 적용 */
+.transaction-modal.modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1050 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
 .transaction-modal .modal-dialog {
-  max-width: 500px;
-  margin: 1rem auto;
+  max-width: 900px !important;
+  margin: 1rem auto !important;
+  max-height: calc(100vh - 2rem) !important;
+  overflow-y: auto !important;
+  position: relative !important;
+}
+
+/* PC 버전에서 더 넓은 모달 */
+@media (min-width: 992px) {
+  .transaction-modal .modal-dialog {
+    max-width: 1000px !important;
+  }
+  
+  /* 그리드 모드일 때 더 넓게 */
+  .transaction-modal.grid-mode .modal-dialog {
+    max-width: 1300px !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .transaction-modal .modal-dialog {
+    max-width: 1100px !important;
+  }
+  
+  /* 그리드 모드일 때 더 넓게 */
+  .transaction-modal.grid-mode .modal-dialog {
+    max-width: 1500px !important;
+  }
+}
+
+/* 모달 내용 영역 스크롤 처리 */
+.transaction-modal .modal-content {
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* 카테고리 선택 영역 */
@@ -44,6 +92,7 @@
   .transaction-modal .modal-dialog {
     margin: 0.5rem;
     max-width: calc(100% - 1rem);
+    max-height: calc(100vh - 1rem);
   }
   
   .transaction-modal .modal-body {
@@ -63,6 +112,7 @@
   .transaction-modal .modal-dialog {
     margin: 0.25rem;
     max-width: calc(100% - 0.5rem);
+    max-height: calc(100vh - 0.5rem);
   }
   
   .transaction-modal .modal-header {
@@ -103,4 +153,98 @@
 
 .category-progress .arrow {
   color: #adb5bd;
+}
+
+/* 여러 거래 추가 기능 */
+.modal-footer .btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.modal-footer .btn-success:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* PC 버전에서 버튼 간격 조정 */
+@media (min-width: 768px) {
+  .modal-footer {
+    gap: 0.5rem;
+  }
+  
+  .modal-footer .btn {
+    min-width: 100px;
+  }
+}
+
+/* 거래 그리드 스타일 */
+.transaction-grid {
+  min-height: 300px;
+}
+
+.transaction-grid .table-responsive {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.transaction-grid table {
+  margin-bottom: 0;
+}
+
+.transaction-grid th {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.transaction-grid td {
+  padding: 0.5rem 0.25rem;
+  vertical-align: middle;
+}
+
+.transaction-grid .form-control-sm,
+.transaction-grid .form-select-sm {
+  font-size: 0.875rem;
+}
+
+.category-select-grid {
+  min-width: 180px;
+}
+
+.category-select-grid .form-select-sm {
+  margin-bottom: 3px;
+}
+
+.category-select-grid .form-select-sm:last-child {
+  margin-bottom: 0;
+}
+
+.category-select-grid .selected-category-info {
+  margin-top: 3px;
+  padding: 2px 6px;
+  background-color: rgba(0, 123, 255, 0.1);
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+
+/* 그리드 행 호버 효과 */
+.transaction-grid tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* 그리드에서 삭제 버튼 */
+.transaction-grid .btn-outline-danger {
+  padding: 0.25rem 0.5rem;
+}
+
+.transaction-grid .btn-outline-danger:hover {
+  background-color: #dc3545;
+  border-color: #dc3545;
 }

@@ -28,13 +28,13 @@ class TransactionController {
     // 거래 내역 추가
     static async createTransaction(req, res) {
         try {
-            const { amount, description, category_id, type, date, account, card, memo } = req.body;
+            const { amount, description, category_id, type, date, account, card, memo, asset_id } = req.body;
             const userId = req.user ? req.user.id : null;
             
-            if (!amount || !type || !date) {
+            if (!amount || !type || !date || !asset_id) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: '금액, 타입, 날짜는 필수입니다.' 
+                    message: '금액, 타입, 날짜, 자산은 필수입니다.' 
                 });
             }
 
@@ -72,7 +72,8 @@ class TransactionController {
                 user_id: userId,
                 account: account || null,
                 card: card || null,
-                memo: memo || null
+                memo: memo || null,
+                asset_id: asset_id
             });
             
             res.status(201).json({ success: true, data: transaction });
@@ -85,7 +86,7 @@ class TransactionController {
     static async updateTransaction(req, res) {
         try {
             const id = req.params.id;
-            const { amount, description, category_id, type, date, account, card, memo } = req.body;
+            const { amount, description, category_id, type, date, account, card, memo, asset_id } = req.body;
             const userId = req.user ? req.user.id : null;
             
             if (!amount || !type || !date) {
@@ -139,7 +140,8 @@ class TransactionController {
                 date,
                 account: account || null,
                 card: card || null,
-                memo: memo || null
+                memo: memo || null,
+                asset_id: asset_id
             }, userId);
             
             res.json({ success: true, data: transaction });

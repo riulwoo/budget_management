@@ -12,6 +12,7 @@ const Categories = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [parentOptions, setParentOptions] = useState([]);
   const [parentId, setParentId] = useState(null); // 선택된 부모 카테고리 ID (null이면 중분류/소분류 숨김)
+  const [modalParentId, setModalParentId] = useState(null); // 모달에서 사용할 기본 parent_id
   const [activeTab, setActiveTab] = useState('all'); // all, income, expense
 
   // 현재 탭에 따른 카테고리 필터링
@@ -23,20 +24,33 @@ const Categories = () => {
   const subCategories = filteredCategories.filter(c => midCategories.some(m => m.id === c.parent_id)); // 선택된 중분류의 소분류
 
   // 모달 열기
-  const openModal = (level, mode, category = null, parentOptions = [], parentId = null) => {
+  const openModal = (level, mode, category = null, parentOptions = [], defaultParentId = null) => {
     setModalLevel(level);
     setModalMode(mode);
     setEditingCategory(category);
     setParentOptions(parentOptions);
-    setParentId(parentId);
+    setModalParentId(defaultParentId); // 모달에서 사용할 기본 parent_id
     setShowModal(true);
   };
 
   // 추가/수정 핸들러
   const handleAdd = (level, parent = null) => {
+    console.log('handleAdd 호출:', { level, parent });
     let options = [];
-    if (level === 'mid') options = mainCategories;
-    if (level === 'sub') options = midCategories;
+    if (level === 'mid') {
+      options = mainCategories;
+    } else if (level === 'sub') {
+      // 소분류 추가 시, 현재 선택된 대분류의 모든 중분류를 옵션으로 제공
+      // parent가 중분류인 경우, 그 중분류가 속한 대분류의 모든 중분류를 찾음
+      if (parent && parent.parent_id) {
+        // parent가 중분류인 경우 (parent.parent_id가 있음)
+        options = filteredCategories.filter(c => c.parent_id === parent.parent_id);
+      } else {
+        // 현재 표시되는 중분류들을 사용
+        options = midCategories;
+      }
+    }
+    console.log('openModal 호출:', { level, options, parentId: parent ? parent.id : null });
     openModal(level, 'add', null, options, parent ? parent.id : null);
   };
   const handleEdit = (level, category, parentOptions = []) => {
@@ -162,6 +176,7 @@ const Categories = () => {
         level={modalLevel}
         activeType={activeTab === 'all' ? 'expense' : activeTab}
         showTypeSelection={activeTab === 'all'}
+        defaultParentId={modalParentId}
       />
     </div>
   );

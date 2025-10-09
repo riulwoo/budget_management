@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import TransactionModal from '../components/modals/TransactionModal';
+
+const TransactionModal = lazy(() => import('../components/modals/TransactionModal'));
 import { formatAmount, formatDate } from '../utils/api';
 import useMediaQuery from '../hooks/useMediaQuery';
 
@@ -140,6 +141,17 @@ const Calendar = () => {
     }
   }, [calendarData, selectedDate, isMobile, currentMonth]);
 
+  // 선택된 날짜 데이터 갱신 (거래내역 변경 시)
+  useEffect(() => {
+    if (selectedDate && calendarData.length > 0) {
+      const updatedDateData = calendarData.flat().find(d => d.dateStr === selectedDate);
+      if (updatedDateData) {
+        console.log('📅 선택된 날짜 데이터 갱신:', selectedDate, updatedDateData.transactions.length, '개 거래');
+        setSelectedDateData(updatedDateData);
+      }
+    }
+  }, [selectedDate, calendarData]);
+
   const handleDateClick = (dateData) => {
     if (dateData.isCurrentMonth) {
       setSelectedDate(dateData.dateStr);
@@ -167,19 +179,23 @@ const Calendar = () => {
     if (result.success) {
       setShowTransactionModal(false);
       setEditingTransaction(null);
-      // 선택된 날짜 데이터 새로고침
-      if (selectedDate) {
-        const updatedDateData = calendarData.flat().find(d => d.dateStr === selectedDate);
-        if (updatedDateData) {
-          setSelectedDateData(updatedDateData);
-        }
-      }
+      // 거래내역이 추가/수정되면 달력 데이터가 자동으로 갱신되므로
+      // 별도의 수동 갱신은 제거합니다.
+      // useEffect에서 transactions 변경을 감지하여 calendarData와 selectedDateData가 자동 갱신됩니다.
     }
     return result;
   };
 
   const handleAddTransaction = () => {
     setEditingTransaction(null);
+    // 선택된 날짜가 없으면 오늘 날짜를 설정
+    if (!selectedDate) {
+      const today = new Date();
+      const kstOffset = 9 * 60;
+      const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
+      const kst = new Date(utc + (kstOffset * 60000));
+      setSelectedDate(kst.toISOString().split('T')[0]);
+    }
     setShowTransactionModal(true);
   };
 
@@ -194,23 +210,9 @@ const Calendar = () => {
         const result = await deleteTransaction(transactionId);
         
         if (result.success) {
-          // 선택된 날짜 데이터에서 해당 거래 제거
-          if (selectedDateData && selectedDate) {
-            const updatedTransactions = selectedDateData.transactions.filter(t => t.id !== transactionId);
-            const updatedTotalIncome = updatedTransactions
-              .filter(t => t.type === 'income')
-              .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-            const updatedTotalExpense = updatedTransactions
-              .filter(t => t.type === 'expense')
-              .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-            
-            setSelectedDateData({
-              ...selectedDateData,
-              transactions: updatedTransactions,
-              totalIncome: updatedTotalIncome,
-              totalExpense: updatedTotalExpense
-            });
-          }
+          // 거래내역이 삭제되면 달력 데이터가 자동으로 갱신되므로
+          // 별도의 수동 갱신은 제거합니다.
+          // useEffect에서 transactions 변경을 감지하여 calendarData와 selectedDateData가 자동 갱신됩니다.
         } else {
           alert('거래 삭제에 실패했습니다: ' + (result.message || '알 수 없는 오류'));
         }
@@ -616,16 +618,21 @@ const Calendar = () => {
                               <i className={`fas ${transaction.type === 'income' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2`}></i>
                               <span className="fw-bold">{transaction.description || '설명 없음'}</span>
                             </div>
-                            {transaction.category_name && (
-                              <div className="mb-1">
+                            <div className="mb-1">
+                              {transaction.asset_name && (
+                                <span className="badge bg-info text-dark me-2">
+                                  <i className={transaction.asset_icon || 'fas fa-wallet'}></i> {transaction.asset_name}
+                                </span>
+                              )}
+                              {transaction.category_name && (
                                 <span 
                                   className="badge category-badge" 
                                   style={{ backgroundColor: transaction.category_color || '#6c757d' }}
                                 >
                                   {transaction.category_name}
                                 </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
                             <div className="text-muted small">
                               <i className="fas fa-clock me-1"></i>
                               {formatDate(transaction.date)}
@@ -664,18 +671,34 @@ const Calendar = () => {
       )}
 
       {/* 거래 추가/수정 모달 */}
-      <TransactionModal 
-        show={showTransactionModal}
-        onHide={() => {
-          setShowTransactionModal(false);
-          setEditingTransaction(null);
-        }}
-        onSubmit={handleTransactionSubmit}
-        title={editingTransaction ? "거래 수정" : "거래 추가"}
-        transaction={editingTransaction}
-        initialDate={selectedDate}
-        categories={categories}
-      />
+      {showTransactionModal && (
+        <Suspense fallback={
+          <div className="modal fade show" style={{display: 'block'}}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-body text-center p-4">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">로딩 중...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }>
+          <TransactionModal 
+            show={showTransactionModal}
+            onHide={() => {
+              setShowTransactionModal(false);
+              setEditingTransaction(null);
+            }}
+            onSubmit={handleTransactionSubmit}
+            title={editingTransaction ? "거래 수정" : "거래 추가"}
+            transaction={editingTransaction}
+            initialDate={selectedDate}
+            categories={categories}
+          />
+        </Suspense>
+      )}
 
       {/* 범례 */}
       <div className="mt-3">

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { formatAmount } from '../utils/api';
-import TransactionModal from '../components/modals/TransactionModal';
+
+const TransactionModal = lazy(() => import('../components/modals/TransactionModal'));
 import CategoryChart from '../components/CategoryChart';
 import RecentTransactions from '../components/RecentTransactions';
 
@@ -306,12 +307,28 @@ const Dashboard = () => {
       </div>
 
       {/* 거래 추가 모달 */}
-      <TransactionModal 
-        show={showTransactionModal}
-        onHide={() => setShowTransactionModal(false)}
-        onSubmit={addTransaction}
-        categories={categories}
-      />
+      {showTransactionModal && (
+        <Suspense fallback={
+          <div className="modal fade show" style={{display: 'block'}}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-body text-center p-4">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">로딩 중...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }>
+          <TransactionModal 
+            show={showTransactionModal}
+            onHide={() => setShowTransactionModal(false)}
+            onSubmit={addTransaction}
+            categories={categories}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

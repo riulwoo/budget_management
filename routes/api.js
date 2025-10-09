@@ -5,6 +5,8 @@ const TransactionController = require('../controller/transactionController');
 const AuthController = require('../controller/authController');
 const BalanceController = require('../controller/balanceController');
 const MemoController = require("../controller/memoController");
+const AssetController = require('../controller/assetController');
+const AssetTypeController = require('../controller/assetTypeController');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 
 // 헬스 체크 엔드포인트
@@ -46,10 +48,22 @@ router.delete('/transactions/:id', authenticateToken, TransactionController.dele
 router.get('/stats/:year/:month', optionalAuth, TransactionController.getMonthlyStats);
 router.get('/stats/:year/:month/categories', optionalAuth, TransactionController.getCategoryStats);
 
-// 초기 자본금 라우트 (인증 필요)
-router.get('/balance/initial', authenticateToken, BalanceController.getInitialBalance);
-router.post('/balance/initial', authenticateToken, BalanceController.setInitialBalance);
+// 잔액 조회 라우트 (인증 필요)
 router.get('/balance/total', authenticateToken, BalanceController.getTotalBalance);
+
+// 자산 관리 라우트 (인증 필요)
+router.get('/assets', authenticateToken, AssetController.getAssets);
+router.post('/assets', authenticateToken, AssetController.createAsset);
+router.put('/assets/:id', authenticateToken, AssetController.updateAsset);
+router.delete('/assets/:id', authenticateToken, AssetController.deleteAsset);
+router.get('/assets/total', authenticateToken, AssetController.getTotalAssets);
+router.get('/assets/type/:typeId', authenticateToken, AssetController.getAssetsByType);
+
+// 자산 유형 관리 라우트 (인증 필요)
+router.get('/asset-types', authenticateToken, AssetTypeController.getAssetTypes);
+router.post('/asset-types', authenticateToken, AssetTypeController.createAssetType);
+router.put('/asset-types/:id', authenticateToken, AssetTypeController.updateAssetType);
+router.delete('/asset-types/:id', authenticateToken, AssetTypeController.deleteAssetType);
 
 // 메모 라우트
 router.get('/memos/my', authenticateToken, MemoController.getMyMemos);

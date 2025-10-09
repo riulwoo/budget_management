@@ -40,7 +40,7 @@ const PAGE_DATA_REQUIREMENTS = {
     totalBalance: false
   },
   
-  // Statistics: 통계 데이터만
+  // Statistics: 카테고리, 월별 통계, 총 잔액
   '/statistics': {
     categories: true, // 카테고리별 통계용
     transactions: false,
@@ -48,11 +48,13 @@ const PAGE_DATA_REQUIREMENTS = {
     totalBalance: true
   },
   
-  // BalanceSettings: 잔액 데이터만
-  '/balance-settings': {
+  // Assets: 자산 관리 (별도 API 사용)
+  '/assets': {
     categories: false,
     transactions: false,
     monthlyStats: false,
     totalBalance: true
   }
 };
+
+export default PAGE_DATA_REQUIREMENTS;

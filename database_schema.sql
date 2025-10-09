@@ -11,7 +11,9 @@ SET collation_connection = utf8mb4_general_ci;
 
 -- 기존 테이블 삭제 (재생성 시 컬럼 타입 변경 등 문제 방지)
 DROP TABLE IF EXISTS audit_log;
-DROP TABLE IF EXISTS memos; 
+DROP TABLE IF EXISTS memos;
+DROP TABLE IF EXISTS assets; 
+DROP TABLE IF EXISTS asset_types;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS initial_balance;
 DROP TABLE IF EXISTS categories;
@@ -55,6 +57,7 @@ CREATE TABLE transactions (
     type ENUM('income', 'expense') NOT NULL,
     date DATE NOT NULL,
     user_id BIGINT NOT NULL,
+    asset_id BIGINT NULL,
     account VARCHAR(100) NULL,
     card VARCHAR(100) NULL,
     memo TEXT NULL,
@@ -62,9 +65,11 @@ CREATE TABLE transactions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE SET NULL,
     INDEX idx_user_date (user_id, date),
     INDEX idx_user_type (user_id, type),
     INDEX idx_category (category_id),
+    INDEX idx_asset (asset_id),
     INDEX idx_date (date),
     INDEX idx_type (type)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -227,6 +232,49 @@ CREATE TABLE IF NOT EXISTS memos (
     INDEX idx_visibility (visibility),
     INDEX idx_created_at (created_at)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 자산 유형 테이블 생성 (현금, 예금, 적금, 투자, 부동산 등)
+CREATE TABLE asset_types (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    icon VARCHAR(50) DEFAULT 'fas fa-wallet',
+    color VARCHAR(7) DEFAULT '#000000',
+    description TEXT NULL,
+    user_id BIGINT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_default (is_default)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 자산 테이블 생성
+CREATE TABLE assets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    asset_type_id BIGINT NOT NULL,
+    amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    description TEXT NULL,
+    user_id BIGINT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (asset_type_id) REFERENCES asset_types(id) ON DELETE RESTRICT,
+    INDEX idx_user (user_id),
+    INDEX idx_user_type (user_id, asset_type_id),
+    INDEX idx_active (is_active)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 기본 자산 유형 데이터 입력
+INSERT INTO asset_types (name, icon, color, description, user_id, is_default) VALUES
+('현금', 'fas fa-money-bill-wave', '#4CAF50', '현금 및 지갑에 있는 돈', NULL, TRUE),
+('예금', 'fas fa-university', '#2196F3', '은행 예금 계좌', NULL, TRUE),
+('적금', 'fas fa-piggy-bank', '#FF9800', '정기 적금 및 예금', NULL, TRUE),
+('투자', 'fas fa-chart-line', '#9C27B0', '주식, 펀드, 채권 등', NULL, TRUE),
+('부동산', 'fas fa-home', '#795548', '집, 땅, 상가 등', NULL, TRUE),
+('기타자산', 'fas fa-box', '#607D8B', '기타 자산', NULL, TRUE);
 
 -- 메모 샘플 데이터 삽입 (user_id = 1 가정)
 -- INSERT INTO memos (user_id, title, content, date, priority, visibility) VALUES 
