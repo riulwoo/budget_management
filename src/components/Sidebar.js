@@ -153,18 +153,13 @@ const Sidebar = ({ currentUser, onLoginClick, onRegisterClick, onProfileClick })
               <i className="fas fa-chart-pie me-2"></i>통계
             </Link>
             
-            {currentUser && (
-              <>
-                <Link 
-                  className={`nav-link text-white mb-2 ${isActive('/assets') ? 'active' : ''}`}
-                  to="/assets"
-                  onClick={closeMenu}
-                >
-                  <i className="fas fa-coins me-2"></i>자산 관리
-                </Link>
-                
-              </>
-            )}
+            <Link 
+              className={`nav-link text-white mb-2 ${isActive('/assets') ? 'active' : ''}`}
+              to="/assets"
+              onClick={closeMenu}
+            >
+              <i className="fas fa-coins me-2"></i>자산 관리
+            </Link>
           </nav>
         </div>
       </div>
