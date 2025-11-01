@@ -419,7 +419,7 @@ const AssetManager = () => {
                         value={assetForm.amount}
                         onChange={(e) => setAssetForm({ ...assetForm, amount: e.target.value })}
                         min="0"
-                        step="1000"
+                        step="1"
                         required 
                       />
                       <span className="input-group-text">원</span>
